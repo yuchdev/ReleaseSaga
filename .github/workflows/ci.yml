@@ -1,0 +1,20 @@
+name: release-saga CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]" 2>/dev/null || pip install -e . && pip install pytest ruff
+      - run: ruff check .
+      - run: python -m pytest test/

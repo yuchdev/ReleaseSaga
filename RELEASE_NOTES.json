@@ -1,0 +1,12 @@
+{
+  "release": {
+    "download_link": ""
+  },
+  "releases": {
+    "0.1.0": {
+      "release_notes": [
+        "Initial scaffold: generalized config, standalone package, ported steps"
+      ]
+    }
+  }
+}

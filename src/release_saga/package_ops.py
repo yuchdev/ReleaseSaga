@@ -43,7 +43,7 @@ def resolve_wheel_path(config: ReleaseConfig) -> Path:
         key=lambda path: path.stat().st_mtime,
         reverse=True,
     )
-    prefix = f"{config.package_name}-{config.version}"
+    prefix = f"{config.package_name}-{config.version}-"
     matching = [path for path in candidates if path.name.startswith(prefix)]
     if not matching:
         raise FileNotFoundError(

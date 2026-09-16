@@ -15,6 +15,7 @@ class GitHubReleaseStep(ReleaseStep):
 
     def __init__(self, config: ReleaseConfig):
         self.config = config
+        self._created_release = False
 
     def _tag(self) -> str:
         return self.config.git_tag_template.format(version=self.config.version)
@@ -65,8 +66,10 @@ class GitHubReleaseStep(ReleaseStep):
     def check(self) -> str | None:
         if not executable_exists("gh"):
             return "GitHub CLI (gh) not installed"
-        if not command_ok(["gh", "auth", "status"]):
+        if not command_ok(["gh", "auth", "status"], cwd=self.config.project_dir):
             return "gh is not logged in (run `gh auth login`)"
+        if command_ok(["gh", "release", "view", self._tag()], cwd=self.config.project_dir):
+            return f"GitHub release '{self._tag()}' already exists"
         if not self.release_version_exists():
             return (
                 f"no release notes found for version {self.config.version} "
@@ -92,12 +95,14 @@ class GitHubReleaseStep(ReleaseStep):
                 check=True,
                 cwd=self.config.project_dir,
             )
+            self._created_release = True
         finally:
             release_file.unlink(missing_ok=True)
 
     def rollback(self) -> None:
-        run(
-            ["gh", "release", "delete", self._tag(), "--yes"],
-            check=True,
-            cwd=self.config.project_dir,
-        )
+        if self._created_release:
+            run(
+                ["gh", "release", "delete", self._tag(), "--yes"],
+                check=True,
+                cwd=self.config.project_dir,
+            )

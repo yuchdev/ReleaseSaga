@@ -17,16 +17,16 @@ def make_config(project_dir: Path) -> ReleaseConfig:
 def test_resolve_wheel_path_matches_prefix_not_exact_suffix(tmp_path: Path) -> None:
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
-    older = dist_dir / "demo_package-1.2.3-py3-none-any.whl"
-    newer = dist_dir / "demo_package-1.2.3-cp311-cp311-manylinux.whl"
-    older.write_text("old", encoding="utf-8")
-    newer.write_text("new", encoding="utf-8")
-    os.utime(older, (1, 1))
-    os.utime(newer, (2, 2))
+    matching = dist_dir / "demo_package-1.2.3-py3-none-any.whl"
+    misleading_newer = dist_dir / "demo_package-1.2.30-py3-none-any.whl"
+    matching.write_text("old", encoding="utf-8")
+    misleading_newer.write_text("new", encoding="utf-8")
+    os.utime(matching, (1, 1))
+    os.utime(misleading_newer, (2, 2))
 
     wheel_path = resolve_wheel_path(make_config(tmp_path))
 
-    assert wheel_path == newer
+    assert wheel_path == matching
 
 
 def test_cleanup_old_wheels_only_removes_matching_package_files(tmp_path: Path) -> None:

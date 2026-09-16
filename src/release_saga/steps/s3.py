@@ -21,6 +21,13 @@ class UploadS3Step(ReleaseStep):
             package_name_dash=self.config.package_name_dash,
         )
 
+    def _key(self) -> str:
+        prefix = self._prefix()
+        if not prefix:
+            return self.wheel_path.name
+        normalized_prefix = prefix if prefix.endswith("/") else f"{prefix}/"
+        return f"{normalized_prefix}{self.wheel_path.name}"
+
     def check(self) -> str | None:
         if self.config.s3_bucket is None:
             return "no s3_bucket configured (set [tool.release-saga].s3_bucket or --s3-bucket)"
@@ -37,7 +44,7 @@ class UploadS3Step(ReleaseStep):
                 "s3",
                 "cp",
                 str(self.wheel_path),
-                f"s3://{self.config.s3_bucket}/{self._prefix()}",
+                f"s3://{self.config.s3_bucket}/{self._key()}",
                 "--acl",
                 "public-read",
             ],
@@ -46,9 +53,8 @@ class UploadS3Step(ReleaseStep):
         )
 
     def rollback(self) -> None:
-        key = f"{self._prefix()}{self.wheel_path.name}"
         run(
-            ["aws", "s3", "rm", f"s3://{self.config.s3_bucket}/{key}"],
+            ["aws", "s3", "rm", f"s3://{self.config.s3_bucket}/{self._key()}"],
             check=True,
             cwd=self.config.project_dir,
         )

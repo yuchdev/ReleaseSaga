@@ -23,13 +23,23 @@ class PublishPyPiStep(ReleaseStep):
         return None
 
     def execute(self) -> None:
+        distributions = sorted(
+            str(path)
+            for path in self.config.project_dir.glob(self.config.wheel_glob)
+            if path.is_file()
+        )
+        if not distributions:
+            raise FileNotFoundError(
+                f"No distributions found for '{self.config.wheel_glob}' "
+                f"in {self.config.project_dir}"
+            )
         run(
             [*PIP, "install", "--upgrade", "build", "twine"],
             check=True,
             cwd=self.config.project_dir,
         )
-        run(["twine", "check", "dist/*"], check=True, cwd=self.config.project_dir)
-        run(["twine", "upload", "dist/*"], check=True, cwd=self.config.project_dir)
+        run(["twine", "check", *distributions], check=True, cwd=self.config.project_dir)
+        run(["twine", "upload", *distributions], check=True, cwd=self.config.project_dir)
 
     def rollback(self) -> None:
         _log(

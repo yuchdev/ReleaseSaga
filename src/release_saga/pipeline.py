@@ -28,7 +28,12 @@ def run_release_pipeline(steps: list[ReleaseStep]) -> None:
     completed: list[ReleaseStep] = []
     for step in steps:
         _log(f"Checking availability: {step.name}")
-        reason = step.check()
+        try:
+            reason = step.check()
+        except Exception as exc:
+            _log(f"ERROR: '{step.name}' availability check failed: {exc}")
+            _rollback(list(reversed(completed)))
+            raise SystemExit(1) from exc
         if reason is not None:
             _log(f"ERROR: '{step.name}' is not available: {reason}")
             _rollback(list(reversed(completed)))

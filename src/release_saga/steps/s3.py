@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+from pathlib import Path
+from subprocess import run
+
+from ..config import ReleaseConfig
+from ..package_ops import command_ok, executable_exists, resolve_wheel_path
+from .base import ReleaseStep
+
+
+class UploadS3Step(ReleaseStep):
+    name = "upload wheel to S3"
+
+    def __init__(self, config: ReleaseConfig, wheel_path: Path | None = None):
+        self.config = config
+        self.wheel_path = wheel_path or resolve_wheel_path(config)
+
+    def _prefix(self) -> str:
+        return self.config.s3_prefix.format(
+            package_name=self.config.package_name,
+            package_name_dash=self.config.package_name_dash,
+        )
+
+    def _key(self) -> str:
+        prefix = self._prefix().lstrip("/")
+        if not prefix:
+            return self.wheel_path.name
+        normalized_prefix = prefix if prefix.endswith("/") else f"{prefix}/"
+        return f"{normalized_prefix}{self.wheel_path.name}"
+
+    def check(self) -> str | None:
+        if self.config.s3_bucket is None:
+            return "no s3_bucket configured (set [tool.release-saga].s3_bucket or --s3-bucket)"
+        if not executable_exists("aws"):
+            return "awscli not installed"
+        if not command_ok(["aws", "sts", "get-caller-identity"]):
+            return "aws credentials are not configured or not valid"
+        if command_ok(
+            [
+                "aws",
+                "s3api",
+                "head-object",
+                "--bucket",
+                self.config.s3_bucket,
+                "--key",
+                self._key(),
+            ],
+            cwd=self.config.project_dir,
+        ):
+            return f"S3 object '{self._key()}' already exists in bucket '{self.config.s3_bucket}'"
+        return None
+
+    def execute(self) -> None:
+        run(
+            [
+                "aws",
+                "s3",
+                "cp",
+                str(self.wheel_path),
+                f"s3://{self.config.s3_bucket}/{self._key()}",
+                "--acl",
+                "public-read",
+            ],
+            check=True,
+            cwd=self.config.project_dir,
+        )
+
+    def rollback(self) -> None:
+        run(
+            ["aws", "s3", "rm", f"s3://{self.config.s3_bucket}/{self._key()}"],
+            check=True,
+            cwd=self.config.project_dir,
+        )

@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "release-saga"
+version = "0.1.0"
+description = "Cross-platform, plugin-extensible release automation with Saga-style rollback"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "Yurii Cherkasov", email = "yuchdev@users.noreply.github.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Build Tools",
+]
+
+[project.urls]
+Homepage = "https://github.com/yuchdev/ReleaseSaga"
+"Bug Tracker" = "https://github.com/yuchdev/ReleaseSaga/issues"
+
+[project.scripts]
+release-saga = "release_saga.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["release_saga*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.16",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

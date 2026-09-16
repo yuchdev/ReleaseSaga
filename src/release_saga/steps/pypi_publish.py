@@ -25,12 +25,12 @@ class PublishPyPiStep(ReleaseStep):
     def execute(self) -> None:
         distributions = sorted(
             str(path)
-            for path in self.config.project_dir.glob(self.config.wheel_glob)
+            for path in self.config.project_dir.glob(self.config.publish_glob)
             if path.is_file()
         )
         if not distributions:
             raise FileNotFoundError(
-                f"No distributions found for '{self.config.wheel_glob}' "
+                f"No distributions found for '{self.config.publish_glob}' "
                 f"in {self.config.project_dir}"
             )
         run(

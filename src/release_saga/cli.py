@@ -50,6 +50,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--project-dir", type=Path, default=None)
     parser.add_argument("--wheel-glob", default=None)
+    parser.add_argument("--publish-glob", default=None)
     parser.add_argument("--s3-bucket", default=None)
     parser.add_argument("--s3-prefix", default=None)
     parser.add_argument("--git-tag-template", default=None)
@@ -66,6 +67,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         key: value
         for key, value in {
             "wheel_glob": args.wheel_glob,
+            "publish_glob": args.publish_glob,
             "s3_bucket": args.s3_bucket,
             "s3_prefix": args.s3_prefix,
             "git_tag_template": args.git_tag_template,

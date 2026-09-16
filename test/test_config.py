@@ -12,6 +12,7 @@ version = "1.2.3"
 
 [tool.release-saga]
 wheel_glob = "custom/*.whl"
+publish_glob = "custom/dist/*"
 s3_bucket = "bucket-from-pyproject"
 git_tag_template = "release.{version}"
 git_remote = "upstream"
@@ -29,6 +30,7 @@ def test_load_config_precedence(tmp_path: Path) -> None:
         tmp_path,
         {
             "wheel_glob": "override/*.whl",
+            "publish_glob": "override/dist/*",
             "git_remote": "origin",
             "s3_prefix": "custom/{package_name_dash}/",
             "git_branch": "main",
@@ -40,6 +42,7 @@ def test_load_config_precedence(tmp_path: Path) -> None:
     assert config.package_name_dash == "demo-package"
     assert config.version == "1.2.3"
     assert config.wheel_glob == "override/*.whl"
+    assert config.publish_glob == "override/dist/*"
     assert config.s3_bucket == "bucket-from-pyproject"
     assert config.s3_prefix == "custom/{package_name_dash}/"
     assert config.git_tag_template == "release.{version}"

@@ -193,7 +193,7 @@ def test_publish_pypi_step_expands_distribution_glob(tmp_path: Path, monkeypatch
     tarball = dist_dir / "demo_package-1.2.3.tar.gz"
     wheel.write_text("wheel", encoding="utf-8")
     tarball.write_text("sdist", encoding="utf-8")
-    step = PublishPyPiStep(make_config(tmp_path, wheel_glob="dist/*"))
+    step = PublishPyPiStep(make_config(tmp_path, publish_glob="dist/*"))
     commands: list[list[str]] = []
 
     monkeypatch.setattr(

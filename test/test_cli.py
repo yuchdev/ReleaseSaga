@@ -26,6 +26,7 @@ def test_help_lists_release_flags(capsys: pytest.CaptureFixture[str]) -> None:
     help_text = capsys.readouterr().out
     assert "--project-dir" in help_text
     assert "--wheel-glob" in help_text
+    assert "--publish-glob" in help_text
     assert "--s3-bucket" in help_text
     assert "--git-tag-template" in help_text
     assert "--release-notes-path" in help_text

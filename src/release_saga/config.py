@@ -13,6 +13,7 @@ class ReleaseConfig:
     package_name_dash: str
     version: str
     wheel_glob: str = "dist/*.whl"
+    publish_glob: str = "dist/*"
     s3_bucket: str | None = None
     s3_prefix: str = "{package_name_dash}/"
     git_tag_template: str = "v{version}"
@@ -54,6 +55,7 @@ def load_config(project_dir: Path, cli_overrides: dict[str, Any]) -> ReleaseConf
 
     values: dict[str, Any] = {
         "wheel_glob": "dist/*.whl",
+        "publish_glob": "dist/*",
         "s3_bucket": None,
         "s3_prefix": "{package_name_dash}/",
         "git_tag_template": "v{version}",

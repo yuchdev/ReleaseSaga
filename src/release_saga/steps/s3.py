@@ -35,6 +35,19 @@ class UploadS3Step(ReleaseStep):
             return "awscli not installed"
         if not command_ok(["aws", "sts", "get-caller-identity"]):
             return "aws credentials are not configured or not valid"
+        if command_ok(
+            [
+                "aws",
+                "s3api",
+                "head-object",
+                "--bucket",
+                self.config.s3_bucket,
+                "--key",
+                self._key(),
+            ],
+            cwd=self.config.project_dir,
+        ):
+            return f"S3 object '{self._key()}' already exists in bucket '{self.config.s3_bucket}'"
         return None
 
     def execute(self) -> None:

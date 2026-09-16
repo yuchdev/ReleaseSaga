@@ -30,6 +30,33 @@ def test_upload_s3_step_reports_missing_bucket(tmp_path: Path) -> None:
     )
 
 
+def test_upload_s3_step_reports_existing_object(tmp_path: Path, monkeypatch) -> None:
+    wheel = tmp_path / "demo_package-1.2.3-py3-none-any.whl"
+    wheel.write_text("wheel", encoding="utf-8")
+    step = UploadS3Step(
+        make_config(tmp_path, s3_bucket="bucket", s3_prefix="releases"),
+        wheel_path=wheel,
+    )
+
+    monkeypatch.setattr("release_saga.steps.s3.executable_exists", lambda executable: True)
+
+    def fake_command_ok(cmd, cwd=None):
+        return cmd[:4] == ["aws", "sts", "get-caller-identity"] or cmd[:3] == [
+            "aws",
+            "s3api",
+            "head-object",
+        ]
+
+    monkeypatch.setattr("release_saga.steps.s3.command_ok", fake_command_ok)
+
+    expected = (
+        "S3 object 'releases/demo_package-1.2.3-py3-none-any.whl' "
+        "already exists in bucket 'bucket'"
+    )
+
+    assert step.check() == expected
+
+
 def test_git_tag_step_reports_missing_remote_when_git_exists(tmp_path: Path, monkeypatch) -> None:
     step = GitTagStep(make_config(tmp_path))
 

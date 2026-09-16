@@ -33,11 +33,14 @@ def test_cleanup_old_wheels_only_removes_matching_package_files(tmp_path: Path) 
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
     matching = dist_dir / "demo_package-1.2.3-py3-none-any.whl"
+    matching_sdist = dist_dir / "demo_package-1.2.3.tar.gz"
     other = dist_dir / "other_package-1.2.3-py3-none-any.whl"
     matching.write_text("x", encoding="utf-8")
+    matching_sdist.write_text("z", encoding="utf-8")
     other.write_text("y", encoding="utf-8")
 
     cleanup_old_wheels(make_config(tmp_path))
 
     assert not matching.exists()
+    assert matching_sdist.exists()
     assert other.exists()

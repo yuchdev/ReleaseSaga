@@ -186,6 +186,17 @@ def test_upload_s3_step_uses_normalized_object_key(tmp_path: Path, monkeypatch) 
     ]
 
 
+def test_upload_s3_step_strips_leading_slashes_from_prefix(tmp_path: Path) -> None:
+    wheel = tmp_path / "demo_package-1.2.3-py3-none-any.whl"
+    wheel.write_text("wheel", encoding="utf-8")
+    step = UploadS3Step(
+        make_config(tmp_path, s3_bucket="bucket", s3_prefix="/releases"),
+        wheel_path=wheel,
+    )
+
+    assert step._key() == "releases/demo_package-1.2.3-py3-none-any.whl"
+
+
 def test_publish_pypi_step_expands_distribution_glob(tmp_path: Path, monkeypatch) -> None:
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()

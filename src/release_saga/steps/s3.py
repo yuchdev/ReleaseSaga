@@ -22,7 +22,7 @@ class UploadS3Step(ReleaseStep):
         )
 
     def _key(self) -> str:
-        prefix = self._prefix()
+        prefix = self._prefix().lstrip("/")
         if not prefix:
             return self.wheel_path.name
         normalized_prefix = prefix if prefix.endswith("/") else f"{prefix}/"

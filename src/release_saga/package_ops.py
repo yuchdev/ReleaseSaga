@@ -79,5 +79,5 @@ def cleanup_old_wheels(config: ReleaseConfig) -> None:
     dist_dir = config.project_dir / "dist"
     if dist_dir.is_dir():
         for path in dist_dir.iterdir():
-            if path.name.startswith(f"{config.package_name}-"):
+            if path.suffix == ".whl" and path.name.startswith(f"{config.package_name}-"):
                 path.unlink()

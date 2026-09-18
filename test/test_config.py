@@ -5,12 +5,12 @@ import pytest
 from release_saga.config import load_config, resolve_project_dir
 
 
-def test_load_config_raises_when_pyproject_missing(tmp_path: Path) -> None:
+def test_load_config_raises_when_pyproject_missing(tmp_path: Path):
     with pytest.raises(RuntimeError, match="Cannot find"):
         load_config(tmp_path, {})
 
 
-def test_load_config_raises_when_name_or_version_missing(tmp_path: Path) -> None:
+def test_load_config_raises_when_name_or_version_missing(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -24,7 +24,7 @@ name = "demo-package"
         load_config(tmp_path, {})
 
 
-def test_load_config_raises_when_tool_table_is_not_a_table(tmp_path: Path) -> None:
+def test_load_config_raises_when_tool_table_is_not_a_table(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -42,7 +42,7 @@ release-saga = "not-a-table"
         load_config(tmp_path, {})
 
 
-def test_load_config_treats_none_tool_table_as_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_config_treats_none_tool_table_as_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         "release_saga.config._load_pyproject",
         lambda project_dir: {
@@ -57,7 +57,7 @@ def test_load_config_treats_none_tool_table_as_empty(tmp_path: Path, monkeypatch
     assert config.wheel_glob == "dist/*.whl"
 
 
-def test_load_config_ignores_unknown_keys_and_none_overrides(tmp_path: Path) -> None:
+def test_load_config_ignores_unknown_keys_and_none_overrides(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -76,7 +76,7 @@ unknown_field = "ignored"
     assert config.wheel_glob == "dist/*.whl"
 
 
-def write_pyproject(project_dir: Path) -> None:
+def write_pyproject(project_dir: Path):
     (project_dir / "pyproject.toml").write_text(
         """
 [project]
@@ -96,7 +96,7 @@ release_notes_path = "notes.json"
     )
 
 
-def test_load_config_precedence(tmp_path: Path) -> None:
+def test_load_config_precedence(tmp_path: Path):
     write_pyproject(tmp_path)
 
     config = load_config(
@@ -122,7 +122,7 @@ def test_load_config_precedence(tmp_path: Path) -> None:
     assert config.release_notes_path == "notes.json"
 
 
-def test_resolve_project_dir_uses_explicit_or_cwd(tmp_path: Path, monkeypatch) -> None:
+def test_resolve_project_dir_uses_explicit_or_cwd(tmp_path: Path, monkeypatch):
     other_dir = tmp_path / "other"
     other_dir.mkdir()
     monkeypatch.chdir(tmp_path)

@@ -20,13 +20,13 @@ def make_config(project_dir: Path, **overrides: Optional[str]) -> ReleaseConfig:
     return ReleaseConfig(**values)
 
 
-def write_wheel(project_dir: Path) -> None:
+def write_wheel(project_dir: Path):
     dist_dir = project_dir / "dist"
     dist_dir.mkdir(exist_ok=True)
     (dist_dir / "demo_package-1.2.3-py3-none-any.whl").write_text("wheel", encoding="utf-8")
 
 
-def test_build_release_steps_no_flags_returns_empty_list(tmp_path: Path) -> None:
+def test_build_release_steps_no_flags_returns_empty_list(tmp_path: Path):
     steps = build_release_steps(
         make_config(tmp_path),
         upload_s3=False,
@@ -37,7 +37,7 @@ def test_build_release_steps_no_flags_returns_empty_list(tmp_path: Path) -> None
     assert steps == []
 
 
-def test_build_release_steps_upload_s3_only(tmp_path: Path) -> None:
+def test_build_release_steps_upload_s3_only(tmp_path: Path):
     write_wheel(tmp_path)
 
     steps = build_release_steps(
@@ -51,7 +51,7 @@ def test_build_release_steps_upload_s3_only(tmp_path: Path) -> None:
     assert isinstance(steps[0], UploadS3Step)
 
 
-def test_build_release_steps_create_release_only(tmp_path: Path) -> None:
+def test_build_release_steps_create_release_only(tmp_path: Path):
     steps = build_release_steps(
         make_config(tmp_path),
         upload_s3=False,
@@ -64,7 +64,7 @@ def test_build_release_steps_create_release_only(tmp_path: Path) -> None:
     assert isinstance(steps[1], GitHubReleaseStep)
 
 
-def test_build_release_steps_publish_pypi_only(tmp_path: Path) -> None:
+def test_build_release_steps_publish_pypi_only(tmp_path: Path):
     steps = build_release_steps(
         make_config(tmp_path),
         upload_s3=False,
@@ -76,7 +76,7 @@ def test_build_release_steps_publish_pypi_only(tmp_path: Path) -> None:
     assert isinstance(steps[0], PublishPyPiStep)
 
 
-def test_build_release_steps_all_flags_full_order(tmp_path: Path) -> None:
+def test_build_release_steps_all_flags_full_order(tmp_path: Path):
     write_wheel(tmp_path)
 
     steps = build_release_steps(

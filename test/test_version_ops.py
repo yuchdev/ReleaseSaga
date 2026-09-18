@@ -20,7 +20,7 @@ def make_config(project_dir: Path, **overrides: Optional[str]) -> ReleaseConfig:
     return ReleaseConfig(**values)
 
 
-def write_pyproject(project_dir: Path) -> None:
+def write_pyproject(project_dir: Path):
     (project_dir / "pyproject.toml").write_text(
         """
 [project]
@@ -38,7 +38,7 @@ s3_bucket = "some-bucket"
     )
 
 
-def write_release_notes(project_dir: Path, releases: dict) -> None:
+def write_release_notes(project_dir: Path, releases: dict):
     (project_dir / "RELEASE_NOTES.json").write_text(
         json.dumps({"release": {"download_link": "https://example.com/x"}, "releases": releases}, indent=2) + "\n",
         encoding="utf-8",
@@ -47,9 +47,15 @@ def write_release_notes(project_dir: Path, releases: dict) -> None:
 
 def test_set_release_version_updates_pyproject_release_notes_and_lock(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+):
     write_pyproject(tmp_path)
-    write_release_notes(tmp_path, {"1.2.3": {"release_notes": ["First release."]}})
+    write_release_notes(
+        tmp_path,
+        {
+            "1.2.3": {"release_notes": ["Second release."]},
+            "1.0.0": {"release_notes": ["First release."]},
+        },
+    )
     config = make_config(tmp_path)
     commands: list[list[str]] = []
 
@@ -67,7 +73,8 @@ def test_set_release_version_updates_pyproject_release_notes_and_lock(
     assert 's3_bucket = "some-bucket"' in pyproject_text
 
     release_notes = json.loads((tmp_path / "RELEASE_NOTES.json").read_text(encoding="utf-8"))
-    assert release_notes["releases"]["1.2.3"]["release_notes"] == ["First release."]
+    assert list(release_notes["releases"].keys()) == ["1.3.0", "1.2.3", "1.0.0"]
+    assert release_notes["releases"]["1.2.3"]["release_notes"] == ["Second release."]
     assert release_notes["releases"]["1.3.0"]["release_notes"] == []
 
     assert commands == [["uv", "lock"]]
@@ -75,7 +82,7 @@ def test_set_release_version_updates_pyproject_release_notes_and_lock(
 
 def test_set_release_version_raises_when_uv_missing_and_does_not_modify_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+):
     write_pyproject(tmp_path)
     write_release_notes(tmp_path, {"1.2.3": {"release_notes": []}})
     config = make_config(tmp_path)
@@ -89,11 +96,18 @@ def test_set_release_version_raises_when_uv_missing_and_does_not_modify_files(
     assert 'version = "1.2.3"' in pyproject_text
 
 
-def test_set_release_version_raises_when_entry_already_exists_and_writes_nothing(
+def test_set_release_version_leaves_release_notes_untouched_when_entry_already_exists(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+):
     write_pyproject(tmp_path)
-    write_release_notes(tmp_path, {"1.3.0": {"release_notes": ["Already here."]}})
+    write_release_notes(
+        tmp_path,
+        {
+            "1.3.0": {"release_notes": ["Already here."]},
+            "1.2.3": {"release_notes": ["Second release."]},
+        },
+    )
+    original_release_notes_text = (tmp_path / "RELEASE_NOTES.json").read_text(encoding="utf-8")
     config = make_config(tmp_path)
     commands: list[list[str]] = []
 
@@ -103,17 +117,18 @@ def test_set_release_version_raises_when_entry_already_exists_and_writes_nothing
         lambda cmd, **kwargs: commands.append(cmd),
     )
 
-    with pytest.raises(RuntimeError, match="already has an entry"):
-        set_release_version(config, "1.3.0")
+    set_release_version(config, "1.3.0")
 
     pyproject_text = (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'version = "1.2.3"' in pyproject_text
-    assert commands == []
+    assert 'version = "1.3.0"' in pyproject_text
+
+    assert (tmp_path / "RELEASE_NOTES.json").read_text(encoding="utf-8") == original_release_notes_text
+    assert commands == [["uv", "lock"]]
 
 
 def test_set_release_version_raises_when_pyproject_missing_project_version(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+):
     (tmp_path / "pyproject.toml").write_text(
         '[tool.release-saga]\ns3_bucket = "some-bucket"\n',
         encoding="utf-8",

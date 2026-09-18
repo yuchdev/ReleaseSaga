@@ -1,17 +1,26 @@
+"""Saga-style release pipeline orchestration."""
+
 from __future__ import annotations
 
 import sys
 from subprocess import CalledProcessError
 
-from .steps.base import ReleaseStep
+from release_saga.steps.base import ReleaseStep
 
 
-def _log(message: str) -> None:
+def _log(message: str):
+    """Write a release pipeline log message to standard error.
+
+    :param message: Human-readable message to emit.
+    """
     print(f"[release] {message}", file=sys.stderr)
 
 
-def _rollback(steps: list[ReleaseStep]) -> None:
-    """Best-effort rollback for completed release steps."""
+def _rollback(steps: list[ReleaseStep]):
+    """Attempt best-effort rollback for the supplied release steps.
+
+    :param steps: Steps to roll back in the order they should be attempted.
+    """
     for step in steps:
         _log(f"Rolling back: {step.name}")
         try:
@@ -23,8 +32,12 @@ def _rollback(steps: list[ReleaseStep]) -> None:
             )
 
 
-def run_release_pipeline(steps: list[ReleaseStep]) -> None:
-    """Run release steps in order, rolling back on unavailability or failure."""
+def run_release_pipeline(steps: list[ReleaseStep]):
+    """Run release steps in order with Saga-style rollback on failure.
+
+    :param steps: Release steps to check and execute sequentially.
+    :raises SystemExit: If a check, execution, or rollback-triggering failure occurs.
+    """
     completed: list[ReleaseStep] = []
     for step in steps:
         _log(f"Checking availability: {step.name}")

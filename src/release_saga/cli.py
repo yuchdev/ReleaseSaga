@@ -1,3 +1,5 @@
+"""Command-line interface helpers for ReleaseSaga."""
+
 from __future__ import annotations
 
 import argparse
@@ -5,8 +7,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Optional
 
-from .config import ReleaseConfig, load_config, resolve_project_dir
-from .package_ops import (
+from release_saga.config import ReleaseConfig, load_config, resolve_project_dir
+from release_saga.package_ops import (
     build_wheel,
     cleanup_old_wheels,
     install_wheel,
@@ -14,16 +16,20 @@ from .package_ops import (
     sanity_check,
     uninstall_wheel,
 )
-from .pipeline import run_release_pipeline
-from .steps.base import ReleaseStep
-from .steps.git_tag import GitTagStep
-from .steps.github_release import GitHubReleaseStep
-from .steps.pypi_publish import PublishPyPiStep
-from .steps.s3 import UploadS3Step
-from .version_ops import set_release_version
+from release_saga.pipeline import run_release_pipeline
+from release_saga.steps.base import ReleaseStep
+from release_saga.steps.git_tag import GitTagStep
+from release_saga.steps.github_release import GitHubReleaseStep
+from release_saga.steps.pypi_publish import PublishPyPiStep
+from release_saga.steps.s3 import UploadS3Step
+from release_saga.version_ops import set_release_version
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
+    """Build the argument parser for the ``release-saga`` CLI.
+
+    :returns: Configured parser containing all supported command-line options.
+    """
     parser = argparse.ArgumentParser(description="Command-line params")
     parser.add_argument(
         "--mode",
@@ -81,7 +87,14 @@ def build_release_steps(
     create_release: bool,
     publish_pypi: bool,
 ) -> list[ReleaseStep]:
-    """Assemble the built-in release steps selected by CLI flags, in pipeline order."""
+    """Assemble the built-in release steps selected by CLI flags.
+
+    :param config: Resolved release configuration for the target project.
+    :param upload_s3: Whether to include the S3 upload step.
+    :param create_release: Whether to include git tagging and GitHub release creation.
+    :param publish_pypi: Whether to include the PyPI publishing step.
+    :returns: Release step instances in the order they must run.
+    """
     steps: list[ReleaseStep] = []
     if upload_s3:
         steps.append(UploadS3Step(config))
@@ -94,6 +107,12 @@ def build_release_steps(
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    """Run the ReleaseSaga command-line application.
+
+    :param argv: Optional argument list to parse instead of ``sys.argv[1:]``.
+    :raises SystemExit: If argument validation fails or a release operation aborts.
+    :returns: Exit status code for a successfully handled command.
+    """
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     project_dir = resolve_project_dir(args.project_dir)

@@ -31,18 +31,18 @@ class DummyStep(ReleaseStep):
             raise self._check_error
         return self._check_result
 
-    def execute(self) -> None:
+    def execute(self):
         self.events.append(f"execute:{self.name}")
         if self._execute_error is not None:
             raise self._execute_error
 
-    def rollback(self) -> None:
+    def rollback(self):
         self.events.append(f"rollback:{self.name}")
         if self._rollback_error is not None:
             raise self._rollback_error
 
 
-def test_run_release_pipeline_completes_all_steps_successfully() -> None:
+def test_run_release_pipeline_completes_all_steps_successfully():
     events: list[str] = []
     first = DummyStep("first", events)
     second = DummyStep("second", events)
@@ -57,7 +57,7 @@ def test_run_release_pipeline_completes_all_steps_successfully() -> None:
     ]
 
 
-def test_run_release_pipeline_rolls_back_failed_step_and_completed_steps() -> None:
+def test_run_release_pipeline_rolls_back_failed_step_and_completed_steps():
     events: list[str] = []
     first = DummyStep("first", events)
     second = DummyStep("second", events, execute_error=CalledProcessError(1, ["cmd"]))
@@ -75,7 +75,7 @@ def test_run_release_pipeline_rolls_back_failed_step_and_completed_steps() -> No
     ]
 
 
-def test_run_release_pipeline_generic_execute_exception_triggers_rollback() -> None:
+def test_run_release_pipeline_generic_execute_exception_triggers_rollback():
     events: list[str] = []
     first = DummyStep("first", events)
     second = DummyStep("second", events, execute_error=RuntimeError("boom"))
@@ -93,7 +93,7 @@ def test_run_release_pipeline_generic_execute_exception_triggers_rollback() -> N
     ]
 
 
-def test_run_release_pipeline_continues_rollback_when_a_rollback_itself_fails() -> None:
+def test_run_release_pipeline_continues_rollback_when_a_rollback_itself_fails():
     events: list[str] = []
     first = DummyStep("first", events, rollback_error=RuntimeError("cleanup failed"))
     second = DummyStep("second", events, execute_error=RuntimeError("boom"))
@@ -111,7 +111,7 @@ def test_run_release_pipeline_continues_rollback_when_a_rollback_itself_fails() 
     ]
 
 
-def test_run_release_pipeline_rolls_back_completed_steps_when_next_step_unavailable() -> None:
+def test_run_release_pipeline_rolls_back_completed_steps_when_next_step_unavailable():
     events: list[str] = []
     first = DummyStep("first", events)
     second = DummyStep("second", events, check_result="missing credentials")
@@ -127,7 +127,7 @@ def test_run_release_pipeline_rolls_back_completed_steps_when_next_step_unavaila
     ]
 
 
-def test_run_release_pipeline_rolls_back_completed_steps_when_check_raises() -> None:
+def test_run_release_pipeline_rolls_back_completed_steps_when_check_raises():
     events: list[str] = []
     first = DummyStep("first", events)
     second = DummyStep("second", events, check_error=RuntimeError("bad release notes"))

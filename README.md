@@ -155,12 +155,12 @@ class ChangelogStep(ReleaseStep):
             return f"CHANGELOG.md already has an entry for {self.config.version}"
         return None
 
-    def execute(self) -> None:
+    def execute(self):
         self._original = self._path.read_text(encoding="utf-8")
         heading = f"## {self.config.version}\n\n"
         self._path.write_text(heading + self._original, encoding="utf-8")
 
-    def rollback(self) -> None:
+    def rollback(self):
         if self._original is not None:
             self._path.write_text(self._original, encoding="utf-8")
 
@@ -180,11 +180,11 @@ class SlackNotifyStep(ReleaseStep):
             return "no Slack webhook configured"
         return None
 
-    def execute(self) -> None:
+    def execute(self):
         # post_to_slack(self.webhook_url, f"Released {self.config.version}")
         self._posted = True
 
-    def rollback(self) -> None:
+    def rollback(self):
         if self._posted:
             # post_to_slack(self.webhook_url, f"Release {self.config.version} rolled back")
             pass

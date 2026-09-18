@@ -29,7 +29,7 @@ def make_config(project_dir: Path) -> ReleaseConfig:
     )
 
 
-def test_resolve_wheel_path_matches_prefix_not_exact_suffix(tmp_path: Path) -> None:
+def test_resolve_wheel_path_matches_prefix_not_exact_suffix(tmp_path: Path):
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
     matching = dist_dir / "demo_package-1.2.3-py3-none-any.whl"
@@ -44,14 +44,14 @@ def test_resolve_wheel_path_matches_prefix_not_exact_suffix(tmp_path: Path) -> N
     assert wheel_path == matching
 
 
-def test_resolve_wheel_path_raises_when_no_match(tmp_path: Path) -> None:
+def test_resolve_wheel_path_raises_when_no_match(tmp_path: Path):
     (tmp_path / "dist").mkdir()
 
     with pytest.raises(FileNotFoundError):
         resolve_wheel_path(make_config(tmp_path))
 
 
-def test_cleanup_old_wheels_only_removes_matching_package_files(tmp_path: Path) -> None:
+def test_cleanup_old_wheels_only_removes_matching_package_files(tmp_path: Path):
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
     matching = dist_dir / "demo_package-1.2.3-py3-none-any.whl"
@@ -68,11 +68,11 @@ def test_cleanup_old_wheels_only_removes_matching_package_files(tmp_path: Path) 
     assert other.exists()
 
 
-def test_cleanup_old_wheels_no_op_when_dist_dir_missing(tmp_path: Path) -> None:
+def test_cleanup_old_wheels_no_op_when_dist_dir_missing(tmp_path: Path):
     cleanup_old_wheels(make_config(tmp_path))
 
 
-def test_executable_exists_true_when_command_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_executable_exists_true_when_command_succeeds(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         "release_saga.package_ops.run",
         lambda cmd, **kwargs: SimpleNamespace(returncode=0),
@@ -81,7 +81,7 @@ def test_executable_exists_true_when_command_succeeds(monkeypatch: pytest.Monkey
     assert executable_exists("git") is True
 
 
-def test_executable_exists_false_when_command_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_executable_exists_false_when_command_fails(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         "release_saga.package_ops.run",
         lambda cmd, **kwargs: SimpleNamespace(returncode=1),
@@ -90,7 +90,7 @@ def test_executable_exists_false_when_command_fails(monkeypatch: pytest.MonkeyPa
     assert executable_exists("git") is False
 
 
-def test_executable_exists_false_when_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_executable_exists_false_when_not_found(monkeypatch: pytest.MonkeyPatch):
     def raise_not_found(cmd, **kwargs):
         raise FileNotFoundError
 
@@ -99,7 +99,7 @@ def test_executable_exists_false_when_not_found(monkeypatch: pytest.MonkeyPatch)
     assert executable_exists("nonexistent-tool") is False
 
 
-def test_command_ok_true_when_command_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_command_ok_true_when_command_succeeds(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         "release_saga.package_ops.run",
         lambda cmd, **kwargs: SimpleNamespace(returncode=0),
@@ -108,7 +108,7 @@ def test_command_ok_true_when_command_succeeds(monkeypatch: pytest.MonkeyPatch) 
     assert command_ok(["git", "status"]) is True
 
 
-def test_command_ok_false_when_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_command_ok_false_when_not_found(monkeypatch: pytest.MonkeyPatch):
     def raise_not_found(cmd, **kwargs):
         raise FileNotFoundError
 
@@ -117,7 +117,7 @@ def test_command_ok_false_when_not_found(monkeypatch: pytest.MonkeyPatch) -> Non
     assert command_ok(["nonexistent-tool"]) is False
 
 
-def test_sanity_check_passes_when_src_layout_exists(tmp_path: Path) -> None:
+def test_sanity_check_passes_when_src_layout_exists(tmp_path: Path):
     (tmp_path / "src" / "demo_package").mkdir(parents=True)
 
     sanity_check(make_config(tmp_path))
@@ -126,7 +126,7 @@ def test_sanity_check_passes_when_src_layout_exists(tmp_path: Path) -> None:
 def test_sanity_check_exits_when_src_layout_missing(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-) -> None:
+):
     with pytest.raises(SystemExit) as exc_info:
         sanity_check(make_config(tmp_path))
 
@@ -134,7 +134,7 @@ def test_sanity_check_exits_when_src_layout_missing(
     assert "Cannot find src/demo_package" in capsys.readouterr().out
 
 
-def test_uninstall_wheel_runs_pip_uninstall(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_uninstall_wheel_runs_pip_uninstall(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     commands: list[list[str]] = []
     monkeypatch.setattr(
         "release_saga.package_ops.run",
@@ -149,7 +149,7 @@ def test_uninstall_wheel_runs_pip_uninstall(tmp_path: Path, monkeypatch: pytest.
 def test_build_wheel_upgrades_pip_and_build_then_builds(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     commands: list[list[str]] = []
     monkeypatch.setattr(
         "release_saga.package_ops.run",
@@ -165,7 +165,7 @@ def test_build_wheel_upgrades_pip_and_build_then_builds(
     ]
 
 
-def test_install_wheel_installs_resolved_wheel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_install_wheel_installs_resolved_wheel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
     wheel = dist_dir / "demo_package-1.2.3-py3-none-any.whl"
@@ -184,7 +184,7 @@ def test_install_wheel_installs_resolved_wheel(tmp_path: Path, monkeypatch: pyte
 def test_install_wheel_devmode_runs_editable_install(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     commands: list[list[str]] = []
     monkeypatch.setattr(
         "release_saga.package_ops.run",

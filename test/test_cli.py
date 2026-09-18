@@ -7,7 +7,7 @@ import pytest
 from release_saga import cli
 
 
-def write_project(project_dir: Path, name: str = "demo-package") -> None:
+def write_project(project_dir: Path, name: str = "demo-package"):
     (project_dir / "src" / name.replace("-", "_")).mkdir(parents=True)
     (project_dir / "pyproject.toml").write_text(
         f"""
@@ -20,7 +20,7 @@ version = "1.2.3"
     )
 
 
-def test_help_lists_release_flags(capsys: pytest.CaptureFixture[str]) -> None:
+def test_help_lists_release_flags(capsys: pytest.CaptureFixture[str]):
     with pytest.raises(SystemExit) as exc_info:
         cli.main(["--help"])
 
@@ -36,7 +36,7 @@ def test_help_lists_release_flags(capsys: pytest.CaptureFixture[str]) -> None:
     assert "--new-version" in help_text
 
 
-def test_git_branch_flag_removed() -> None:
+def test_git_branch_flag_removed():
     with pytest.raises(SystemExit) as exc_info:
         cli.main(["--git-branch", "main"])
 
@@ -46,7 +46,7 @@ def test_git_branch_flag_removed() -> None:
 def test_cli_uses_explicit_project_dir(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     captured: list[Path] = []
@@ -63,7 +63,7 @@ def test_cli_uses_explicit_project_dir(
 def test_cli_install_mode_cleans_builds_and_installs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     calls: list[str] = []
@@ -82,7 +82,7 @@ def test_cli_install_mode_cleans_builds_and_installs(
 def test_cli_dev_mode_installs_editable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     calls: list[str] = []
@@ -101,7 +101,7 @@ def test_cli_dev_mode_installs_editable(
 def test_cli_reinstall_mode_is_default_and_runs_full_cycle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     calls: list[str] = []
@@ -121,7 +121,7 @@ def test_cli_reinstall_mode_is_default_and_runs_full_cycle(
 def test_cli_uninstall_mode_skips_release_pipeline(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     calls: list[str] = []
@@ -139,7 +139,7 @@ def test_cli_uninstall_mode_skips_release_pipeline(
 def test_cli_runs_release_pipeline_when_steps_selected(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     dist_dir = project_dir / "dist"
@@ -165,7 +165,7 @@ def test_cli_version_flag_prints_target_project_version(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
-) -> None:
+):
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
 
@@ -178,7 +178,7 @@ def test_cli_version_flag_prints_target_project_version(
 def test_cli_version_flag_skips_mode_dispatch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
 
@@ -192,7 +192,7 @@ def test_cli_version_flag_skips_mode_dispatch(
 def test_cli_set_version_mode_requires_new_version(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
 
@@ -205,7 +205,7 @@ def test_cli_set_version_mode_requires_new_version(
 def test_cli_set_version_mode_calls_set_release_version_and_skips_pipeline(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+):
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     calls: list[tuple[str, str]] = []
@@ -238,7 +238,7 @@ def test_cli_set_version_mode_calls_set_release_version_and_skips_pipeline(
     assert calls == [("1.2.3", "1.3.0")]
 
 
-def test_dunder_main_module_exits_cleanly_on_help(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_dunder_main_module_exits_cleanly_on_help(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(sys, "argv", ["release-saga", "--help"])
 
     with pytest.raises(SystemExit) as exc_info:

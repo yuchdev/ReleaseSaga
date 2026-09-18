@@ -3,6 +3,11 @@
     "download_link": "https://packages-s3-useast1-any.s3.dualstack.us-east-1.amazonaws.com/{package_name_dash}/{package_name}-{version}-py3-none-any.whl"
   },
   "releases": {
+    "1.0.1": {
+      "release_notes": [
+        "Fixes a bug in the `--mode set-version` command that caused an error when the version was already set in RELEASE_NOTES.json"
+      ]
+    },
     "1.0.0": {
       "release_notes": [
         "Add `--mode set-version` and bump version in pyproject.toml"

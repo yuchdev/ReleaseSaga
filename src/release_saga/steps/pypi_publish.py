@@ -1,28 +1,49 @@
+"""PyPI publishing step for the release pipeline."""
+
 from __future__ import annotations
 
 from pathlib import Path
 from subprocess import run
 from typing import Optional
 
-from ..config import ReleaseConfig
-from ..package_ops import PIP, executable_exists
-from .base import ReleaseStep
+from release_saga.config import ReleaseConfig
+from release_saga.package_ops import PIP, executable_exists
+from release_saga.steps.base import ReleaseStep
 
 
 class PublishPyPiStep(ReleaseStep):
+    """Publish built distributions to PyPI.
+
+    :param config: Resolved release configuration for the target project.
+    """
+
+    #: Human-readable step name used in pipeline logs.
     name = "publish to PyPI"
 
     def __init__(self, config: ReleaseConfig):
+        """Initialize the PyPI publishing step.
+
+        :param config: Resolved release configuration for the target project.
+        """
         self.config = config
 
     def check(self) -> Optional[str]:
+        """Check that PyPI publishing prerequisites are available.
+
+        :returns: ``None`` when publishing can proceed, otherwise a blocking reason.
+        """
         if not executable_exists("twine"):
             return "twine not installed"
         if not (Path.home() / ".pypirc").is_file():
             return "no ~/.pypirc file found"
         return None
 
-    def execute(self) -> None:
+    def execute(self):
+        """Validate and upload configured distribution files to PyPI.
+
+        :raises FileNotFoundError: If no distributions match ``config.publish_glob``.
+        :raises CalledProcessError: If dependency installation, validation, or upload fails.
+        """
         distributions = sorted(
             str(path) for path in self.config.project_dir.glob(self.config.publish_glob) if path.is_file()
         )
@@ -38,7 +59,8 @@ class PublishPyPiStep(ReleaseStep):
         run(["twine", "check", *distributions], check=True, cwd=self.config.project_dir)
         run(["twine", "upload", *distributions], check=True, cwd=self.config.project_dir)
 
-    def rollback(self) -> None:
+    def rollback(self):
+        """Log manual cleanup instructions for an irreversible PyPI upload."""
         from ..pipeline import _log
 
         _log(

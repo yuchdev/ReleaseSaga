@@ -60,13 +60,15 @@ independent things based on `--mode`:
    handed to `run_release_pipeline`.
 3. `--mode set-version --new-version X.Y.Z` (`version_ops.py`): sets the version deliberately
    *outside* the release pipeline/steps machinery — direct, one-shot, no rollback, same tradeoff
-   as `package_ops.py`. Order matters: it checks `RELEASE_NOTES.json` doesn't already have an
-   entry for the target version and that `uv` is on `PATH` *before* writing anything, then writes
-   `pyproject.toml`'s `[project].version` (via a targeted line replace that preserves comments/
-   formatting — it does not round-trip through `tomllib`, which is read-only anyway), adds an
-   empty `{"release_notes": []}` entry to `RELEASE_NOTES.json` for the new version, and finally
-   runs `uv lock` so `uv.lock` matches. `main()` returns immediately after this — it does not fall
-   through to the wheel lifecycle or the release pipeline. `--version` (no value) is unrelated: a
+   as `package_ops.py`. It checks `uv` is on `PATH` *before* writing anything (the one check that
+   can be done up front), then writes `pyproject.toml`'s `[project].version` (via a targeted line
+   replace that preserves comments/formatting — it does not round-trip through `tomllib`, which
+   is read-only anyway). It then adds an empty `{"release_notes": []}` entry to
+   `RELEASE_NOTES.json` for the new version — *unless* that version already has an entry there
+   (e.g. hand-written notes from an earlier `set-version` run), in which case `RELEASE_NOTES.json`
+   is left untouched rather than overwritten. Either way it finally runs `uv lock` so `uv.lock`
+   matches. `main()` returns immediately after this — it does not fall through to the wheel
+   lifecycle or the release pipeline. `--version` (no value) is unrelated: a
    read-only flag that prints the target project's *current* version from its `pyproject.toml` and
    exits, independent of `--mode`.
 

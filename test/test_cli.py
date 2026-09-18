@@ -1,3 +1,5 @@
+import runpy
+import sys
 from pathlib import Path
 
 import pytest
@@ -54,3 +56,113 @@ def test_cli_uses_explicit_project_dir(
 
     assert exit_code == 0
     assert captured == [project_dir.resolve()]
+
+
+def test_cli_install_mode_cleans_builds_and_installs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    calls: list[str] = []
+
+    monkeypatch.setattr(cli, "sanity_check", lambda config: None)
+    monkeypatch.setattr(cli, "cleanup_old_wheels", lambda config: calls.append("cleanup"))
+    monkeypatch.setattr(cli, "build_wheel", lambda config: calls.append("build"))
+    monkeypatch.setattr(cli, "install_wheel", lambda config: calls.append("install"))
+
+    exit_code = cli.main(["--mode", "install", "--project-dir", str(project_dir)])
+
+    assert exit_code == 0
+    assert calls == ["cleanup", "build", "install"]
+
+
+def test_cli_dev_mode_installs_editable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    calls: list[str] = []
+
+    monkeypatch.setattr(cli, "sanity_check", lambda config: None)
+    monkeypatch.setattr(cli, "cleanup_old_wheels", lambda config: calls.append("cleanup"))
+    monkeypatch.setattr(cli, "build_wheel", lambda config: calls.append("build"))
+    monkeypatch.setattr(cli, "install_wheel_devmode", lambda config: calls.append("dev"))
+
+    exit_code = cli.main(["--mode", "dev", "--project-dir", str(project_dir)])
+
+    assert exit_code == 0
+    assert calls == ["cleanup", "build", "dev"]
+
+
+def test_cli_reinstall_mode_is_default_and_runs_full_cycle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    calls: list[str] = []
+
+    monkeypatch.setattr(cli, "sanity_check", lambda config: None)
+    monkeypatch.setattr(cli, "cleanup_old_wheels", lambda config: calls.append("cleanup"))
+    monkeypatch.setattr(cli, "uninstall_wheel", lambda config: calls.append("uninstall"))
+    monkeypatch.setattr(cli, "build_wheel", lambda config: calls.append("build"))
+    monkeypatch.setattr(cli, "install_wheel", lambda config: calls.append("install"))
+
+    exit_code = cli.main(["--project-dir", str(project_dir)])
+
+    assert exit_code == 0
+    assert calls == ["cleanup", "uninstall", "build", "install"]
+
+
+def test_cli_uninstall_mode_skips_release_pipeline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    calls: list[str] = []
+
+    monkeypatch.setattr(cli, "sanity_check", lambda config: None)
+    monkeypatch.setattr(cli, "uninstall_wheel", lambda config: calls.append("uninstall"))
+    monkeypatch.setattr(cli, "run_release_pipeline", lambda steps: calls.append("pipeline"))
+
+    exit_code = cli.main(["--mode", "uninstall", "--project-dir", str(project_dir), "--create-release"])
+
+    assert exit_code == 0
+    assert calls == ["uninstall"]
+
+
+def test_cli_runs_release_pipeline_when_steps_selected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    dist_dir = project_dir / "dist"
+    dist_dir.mkdir()
+    (dist_dir / "demo_package-1.2.3-py3-none-any.whl").write_text("wheel", encoding="utf-8")
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(cli, "sanity_check", lambda config: None)
+    monkeypatch.setattr(cli, "build_wheel", lambda config: None)
+    monkeypatch.setattr(
+        cli,
+        "run_release_pipeline",
+        lambda steps: calls.append([type(step).__name__ for step in steps]),
+    )
+
+    exit_code = cli.main(["--mode", "build", "--project-dir", str(project_dir), "--upload-s3"])
+
+    assert exit_code == 0
+    assert calls == [["UploadS3Step"]]
+
+
+def test_dunder_main_module_exits_cleanly_on_help(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys, "argv", ["release-saga", "--help"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        runpy.run_module("release_saga.__main__", run_name="__main__")
+
+    assert exc_info.value.code == 0

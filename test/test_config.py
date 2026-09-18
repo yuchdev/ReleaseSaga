@@ -1,6 +1,79 @@
 from pathlib import Path
 
+import pytest
+
 from release_saga.config import load_config, resolve_project_dir
+
+
+def test_load_config_raises_when_pyproject_missing(tmp_path: Path) -> None:
+    with pytest.raises(RuntimeError, match="Cannot find"):
+        load_config(tmp_path, {})
+
+
+def test_load_config_raises_when_name_or_version_missing(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "demo-package"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="must be present"):
+        load_config(tmp_path, {})
+
+
+def test_load_config_raises_when_tool_table_is_not_a_table(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "demo-package"
+version = "1.2.3"
+
+[tool]
+release-saga = "not-a-table"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="must be a table"):
+        load_config(tmp_path, {})
+
+
+def test_load_config_treats_none_tool_table_as_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "release_saga.config._load_pyproject",
+        lambda project_dir: {
+            "project": {"name": "demo-package", "version": "1.2.3"},
+            "tool": {"release-saga": None},
+        },
+    )
+
+    config = load_config(tmp_path, {})
+
+    assert config.s3_bucket is None
+    assert config.wheel_glob == "dist/*.whl"
+
+
+def test_load_config_ignores_unknown_keys_and_none_overrides(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "demo-package"
+version = "1.2.3"
+
+[tool.release-saga]
+unknown_field = "ignored"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = load_config(tmp_path, {"wheel_glob": None, "another_unknown": "ignored"})
+
+    assert config.wheel_glob == "dist/*.whl"
 
 
 def write_pyproject(project_dir: Path) -> None:

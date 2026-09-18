@@ -1,4 +1,5 @@
 from subprocess import CalledProcessError
+from typing import Optional
 
 import pytest
 
@@ -12,17 +13,19 @@ class DummyStep(ReleaseStep):
         name: str,
         events: list[str],
         *,
-        check_result: str | None = None,
-        check_error: Exception | None = None,
-        execute_error: Exception | None = None,
+        check_result: Optional[str] = None,
+        check_error: Optional[Exception] = None,
+        execute_error: Optional[Exception] = None,
+        rollback_error: Optional[Exception] = None,
     ):
         self.name = name
         self.events = events
         self._check_result = check_result
         self._check_error = check_error
         self._execute_error = execute_error
+        self._rollback_error = rollback_error
 
-    def check(self) -> str | None:
+    def check(self) -> Optional[str]:
         self.events.append(f"check:{self.name}")
         if self._check_error is not None:
             raise self._check_error
@@ -35,12 +38,65 @@ class DummyStep(ReleaseStep):
 
     def rollback(self) -> None:
         self.events.append(f"rollback:{self.name}")
+        if self._rollback_error is not None:
+            raise self._rollback_error
+
+
+def test_run_release_pipeline_completes_all_steps_successfully() -> None:
+    events: list[str] = []
+    first = DummyStep("first", events)
+    second = DummyStep("second", events)
+
+    run_release_pipeline([first, second])
+
+    assert events == [
+        "check:first",
+        "execute:first",
+        "check:second",
+        "execute:second",
+    ]
 
 
 def test_run_release_pipeline_rolls_back_failed_step_and_completed_steps() -> None:
     events: list[str] = []
     first = DummyStep("first", events)
     second = DummyStep("second", events, execute_error=CalledProcessError(1, ["cmd"]))
+
+    with pytest.raises(SystemExit):
+        run_release_pipeline([first, second])
+
+    assert events == [
+        "check:first",
+        "execute:first",
+        "check:second",
+        "execute:second",
+        "rollback:second",
+        "rollback:first",
+    ]
+
+
+def test_run_release_pipeline_generic_execute_exception_triggers_rollback() -> None:
+    events: list[str] = []
+    first = DummyStep("first", events)
+    second = DummyStep("second", events, execute_error=RuntimeError("boom"))
+
+    with pytest.raises(SystemExit):
+        run_release_pipeline([first, second])
+
+    assert events == [
+        "check:first",
+        "execute:first",
+        "check:second",
+        "execute:second",
+        "rollback:second",
+        "rollback:first",
+    ]
+
+
+def test_run_release_pipeline_continues_rollback_when_a_rollback_itself_fails() -> None:
+    events: list[str] = []
+    first = DummyStep("first", events, rollback_error=RuntimeError("cleanup failed"))
+    second = DummyStep("second", events, execute_error=RuntimeError("boom"))
 
     with pytest.raises(SystemExit):
         run_release_pipeline([first, second])

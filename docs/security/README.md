@@ -34,7 +34,7 @@ for point-in-time reviews.
 
 > **SME REVIEW NEEDED (AI-drafted - verify before relying on this):**
 >
-> Drafted from a read of `src/release_saga/` at version `0.1.0`. Nothing below has been
+> Drafted from a read of `src/release_saga/` at version `0.9.0`. Nothing below has been
 > validated by a security engineer, and no control listed as "existing" has been tested.
 > File it as `threat-model-release-pipeline.md` once reviewed.
 >

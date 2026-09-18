@@ -3,7 +3,7 @@ from importlib.metadata import PackageNotFoundError, version
 try:
     __version__ = version("release-saga")
 except PackageNotFoundError:
-    __version__ = "0.1.0"
+    __version__ = "0.9.0"
 
 from .cli import build_arg_parser, build_release_steps
 from .config import ReleaseConfig, load_config, resolve_project_dir

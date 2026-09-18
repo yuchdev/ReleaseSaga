@@ -66,7 +66,7 @@ reusable functions, not private to `cli.py`. `steps/__init__.py` similarly re-ex
 concrete step classes (`GitTagStep`, `GitHubReleaseStep`, `PublishPyPiStep`, `UploadS3Step`)
 alongside `ReleaseStep`. Together these let a library consumer add one custom `ReleaseStep`
 subclass and still reuse the CLI's own flags and built-in step wiring rather than reimplementing
-them — the worked pattern is in `docs/guides/custom-release-step.md`. There is deliberately no
+them — the worked pattern is in `docs/tutorials/custom-release-step.md`. There is deliberately no
 `run(extra_steps=...)`-style wrapper; that was considered and rejected as unneeded abstraction over
 ~15 lines of glue.
 

@@ -1,3 +1,8 @@
+import importlib
+from importlib.metadata import PackageNotFoundError
+
+import pytest
+
 import release_saga
 import release_saga.cli
 import release_saga.config
@@ -21,6 +26,22 @@ def test_public_api_reexports_match_source_modules() -> None:
 
 def test_public_api_keeps_version() -> None:
     assert isinstance(release_saga.__version__, str)
+
+
+def test_version_falls_back_when_package_metadata_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def raise_not_found(name: str) -> None:
+        raise PackageNotFoundError(name)
+
+    monkeypatch.setattr("importlib.metadata.version", raise_not_found)
+    importlib.reload(release_saga)
+
+    try:
+        assert release_saga.__version__ == "0.9.0"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(release_saga)
 
 
 def test_steps_package_reexports_concrete_steps() -> None:

@@ -20,6 +20,7 @@ from .steps.git_tag import GitTagStep
 from .steps.github_release import GitHubReleaseStep
 from .steps.pypi_publish import PublishPyPiStep
 from .steps.s3 import UploadS3Step
+from .version_ops import set_release_version
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -27,8 +28,20 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--mode",
         help="What to do with the package",
-        choices=["build", "install", "dev", "reinstall", "uninstall"],
+        choices=["build", "install", "dev", "reinstall", "uninstall", "set-version"],
         default="reinstall",
+        required=False,
+    )
+    parser.add_argument(
+        "--version",
+        help="Print the target project's current version (from its pyproject.toml) and exit",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "--new-version",
+        help="Version to write when --mode is 'set-version'",
+        default=None,
         required=False,
     )
     parser.add_argument(
@@ -81,8 +94,18 @@ def build_release_steps(
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    args = build_arg_parser().parse_args(argv)
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
     project_dir = resolve_project_dir(args.project_dir)
+
+    if args.version:
+        config = load_config(project_dir, {})
+        print(config.version)
+        return 0
+
+    if args.mode == "set-version" and not args.new_version:
+        parser.error("--new-version is required when --mode is 'set-version'")
+
     cli_overrides = {
         key: value
         for key, value in {
@@ -97,6 +120,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if value is not None
     }
     config = load_config(project_dir, cli_overrides)
+
+    if args.mode == "set-version":
+        set_release_version(config, args.new_version)
+        print(f"Set version to {args.new_version}")
+        return 0
 
     print(f"Package name: {config.package_name}")
     print(f"Package name2: {config.package_name_dash}")

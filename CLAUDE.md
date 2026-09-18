@@ -50,14 +50,25 @@ in precedence order: built-in default → `[tool.release-saga]` table in the tar
 args before merging, so an explicit CLI flag always wins but an *unset* one never masks a value
 from the config table. The result is a frozen `ReleaseConfig` dataclass passed to every step.
 
-**Local package ops vs. release pipeline** (`cli.py`): `main()` does two independent things based
-on `--mode`:
+**Local package ops vs. release pipeline vs. version setting** (`cli.py`): `main()` does three
+independent things based on `--mode`:
 1. Local wheel lifecycle (`package_ops.py`): `build`/`install`/`dev`/`reinstall`/`uninstall` —
    direct `pip`/`build` subprocess calls against the target project, no rollback semantics.
-2. The release pipeline (only when `--mode` isn't `uninstall`): an opt-in list of `ReleaseStep`s
-   is assembled from `--upload-s3`, `--create-release` (adds both `GitTagStep` and
+2. The release pipeline (only when `--mode` isn't `uninstall` or `set-version`): an opt-in list of
+   `ReleaseStep`s is assembled from `--upload-s3`, `--create-release` (adds both `GitTagStep` and
    `GitHubReleaseStep`), and `--publish-pypi` by the public `build_release_steps()` function, then
    handed to `run_release_pipeline`.
+3. `--mode set-version --new-version X.Y.Z` (`version_ops.py`): sets the version deliberately
+   *outside* the release pipeline/steps machinery — direct, one-shot, no rollback, same tradeoff
+   as `package_ops.py`. Order matters: it checks `RELEASE_NOTES.json` doesn't already have an
+   entry for the target version and that `uv` is on `PATH` *before* writing anything, then writes
+   `pyproject.toml`'s `[project].version` (via a targeted line replace that preserves comments/
+   formatting — it does not round-trip through `tomllib`, which is read-only anyway), adds an
+   empty `{"release_notes": []}` entry to `RELEASE_NOTES.json` for the new version, and finally
+   runs `uv lock` so `uv.lock` matches. `main()` returns immediately after this — it does not fall
+   through to the wheel lifecycle or the release pipeline. `--version` (no value) is unrelated: a
+   read-only flag that prints the target project's *current* version from its `pyproject.toml` and
+   exits, independent of `--mode`.
 
 **Public library facade** (`release_saga/__init__.py`): re-exports `ReleaseStep`, `ReleaseConfig`,
 `load_config`, `resolve_project_dir`, `run_release_pipeline`, `build_arg_parser`, and

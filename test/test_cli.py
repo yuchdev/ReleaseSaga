@@ -32,6 +32,8 @@ def test_help_lists_release_flags(capsys: pytest.CaptureFixture[str]) -> None:
     assert "--s3-bucket" in help_text
     assert "--git-tag-template" in help_text
     assert "--release-notes-path" in help_text
+    assert "--version" in help_text
+    assert "--new-version" in help_text
 
 
 def test_git_branch_flag_removed() -> None:
@@ -157,6 +159,83 @@ def test_cli_runs_release_pipeline_when_steps_selected(
 
     assert exit_code == 0
     assert calls == [["UploadS3Step"]]
+
+
+def test_cli_version_flag_prints_target_project_version(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+
+    exit_code = cli.main(["--project-dir", str(project_dir), "--version"])
+
+    assert exit_code == 0
+    assert capsys.readouterr().out.strip() == "1.2.3"
+
+
+def test_cli_version_flag_skips_mode_dispatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+
+    monkeypatch.setattr(cli, "sanity_check", lambda config: (_ for _ in ()).throw(AssertionError("should not run")))
+
+    exit_code = cli.main(["--project-dir", str(project_dir), "--version", "--mode", "build"])
+
+    assert exit_code == 0
+
+
+def test_cli_set_version_mode_requires_new_version(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main(["--project-dir", str(project_dir), "--mode", "set-version"])
+
+    assert exc_info.value.code == 2
+
+
+def test_cli_set_version_mode_calls_set_release_version_and_skips_pipeline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    calls: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(cli, "sanity_check", lambda config: (_ for _ in ()).throw(AssertionError("should not run")))
+    monkeypatch.setattr(
+        cli,
+        "set_release_version",
+        lambda config, new_version: calls.append((config.version, new_version)),
+    )
+    monkeypatch.setattr(
+        cli,
+        "run_release_pipeline",
+        lambda steps: (_ for _ in ()).throw(AssertionError("should not run")),
+    )
+
+    exit_code = cli.main(
+        [
+            "--project-dir",
+            str(project_dir),
+            "--mode",
+            "set-version",
+            "--new-version",
+            "1.3.0",
+            "--create-release",
+        ]
+    )
+
+    assert exit_code == 0
+    assert calls == [("1.2.3", "1.3.0")]
 
 
 def test_dunder_main_module_exits_cleanly_on_help(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from subprocess import run
+from typing import Optional
 
 from ..config import ReleaseConfig
 from ..package_ops import PIP, executable_exists
-from ..pipeline import _log
 from .base import ReleaseStep
 
 
@@ -15,7 +15,7 @@ class PublishPyPiStep(ReleaseStep):
     def __init__(self, config: ReleaseConfig):
         self.config = config
 
-    def check(self) -> str | None:
+    def check(self) -> Optional[str]:
         if not executable_exists("twine"):
             return "twine not installed"
         if not (Path.home() / ".pypirc").is_file():
@@ -24,14 +24,11 @@ class PublishPyPiStep(ReleaseStep):
 
     def execute(self) -> None:
         distributions = sorted(
-            str(path)
-            for path in self.config.project_dir.glob(self.config.publish_glob)
-            if path.is_file()
+            str(path) for path in self.config.project_dir.glob(self.config.publish_glob) if path.is_file()
         )
         if not distributions:
             raise FileNotFoundError(
-                f"No distributions found for '{self.config.publish_glob}' "
-                f"in {self.config.project_dir}"
+                f"No distributions found for '{self.config.publish_glob}' in {self.config.project_dir}"
             )
         run(
             [*PIP, "install", "--upgrade", "build", "twine"],
@@ -42,6 +39,8 @@ class PublishPyPiStep(ReleaseStep):
         run(["twine", "upload", *distributions], check=True, cwd=self.config.project_dir)
 
     def rollback(self) -> None:
+        from ..pipeline import _log
+
         _log(
             f"WARNING: cannot auto-rollback a PyPI publish. If {self.config.package_name}=="
             f"{self.config.version} was actually uploaded, yank it manually at "

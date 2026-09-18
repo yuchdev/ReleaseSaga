@@ -3,7 +3,7 @@ from __future__ import annotations
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 
 @dataclass(frozen=True)
@@ -14,15 +14,14 @@ class ReleaseConfig:
     version: str
     wheel_glob: str = "dist/*.whl"
     publish_glob: str = "dist/*"
-    s3_bucket: str | None = None
+    s3_bucket: Optional[str] = None
     s3_prefix: str = "{package_name_dash}/"
     git_tag_template: str = "v{version}"
     git_remote: str = "origin"
-    git_branch: str | None = None
     release_notes_path: str = "RELEASE_NOTES.json"
 
 
-def resolve_project_dir(explicit: Path | None) -> Path:
+def resolve_project_dir(explicit: Optional[Path]) -> Path:
     """Directory containing the target project's pyproject.toml."""
     if explicit is not None:
         return explicit.resolve()
@@ -60,7 +59,6 @@ def load_config(project_dir: Path, cli_overrides: dict[str, Any]) -> ReleaseConf
         "s3_prefix": "{package_name_dash}/",
         "git_tag_template": "v{version}",
         "git_remote": "origin",
-        "git_branch": None,
         "release_notes_path": "RELEASE_NOTES.json",
     }
     for source in (tool_table, cli_overrides):

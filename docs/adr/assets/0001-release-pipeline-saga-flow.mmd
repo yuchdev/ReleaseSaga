@@ -1,0 +1,15 @@
+---
+title: Release pipeline Saga flow (ADR 0001)
+---
+flowchart TD
+    Start["Ordered release steps"] --> Check["step.check()"]
+    Check -->|ready| Execute["step.execute()"]
+    Check -->|reason or exception| CheckFail["Stop before this step runs"]
+    Execute -->|success| Complete["Mark step completed"]
+    Execute -->|failure| ExecuteFail["Rollback failing step first"]
+    Complete --> Next["Continue to next step"]
+    Complete -.-> Track["Multi-effect steps track partial progress on self"]
+    CheckFail --> UndoDone["Rollback previously completed steps in reverse order"]
+    ExecuteFail --> UndoDone
+    UndoDone --> BestEffort["Keep rolling back even if one rollback warns"]
+    Next --> Tail["Place irreversible steps last\nfor example: PyPI publish"]

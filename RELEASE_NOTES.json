@@ -1,11 +1,15 @@
 {
   "release": {
-    "download_link": ""
+    "download_link": "https://packages-s3-useast1-any.s3.dualstack.us-east-1.amazonaws.com/{package_name_dash}/{package_name}-{version}-py3-none-any.whl"
   },
   "releases": {
     "0.1.0": {
       "release_notes": [
-        "Initial scaffold: generalized config, standalone package, ported steps"
+        "Initial alpha release of ReleaseSaga, a standalone Python CLI for release automation with Saga-style rollback.",
+        "Adds a configurable release pipeline that reads target-project metadata from pyproject.toml and supports CLI overrides for release behavior.",
+        "Ships built-in release steps for AWS S3 uploads, git tag creation, GitHub release creation, and PyPI publishing with preflight checks before execution.",
+        "Implements reverse-order rollback, including rollback of the failing step first and best-effort cleanup for earlier completed steps.",
+        "Documents how to extend the pipeline with custom ReleaseStep implementations for project-specific release actions."
       ]
     }
   }

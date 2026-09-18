@@ -33,7 +33,6 @@ def test_load_config_precedence(tmp_path: Path) -> None:
             "publish_glob": "override/dist/*",
             "git_remote": "origin",
             "s3_prefix": "custom/{package_name_dash}/",
-            "git_branch": "main",
         },
     )
 
@@ -47,7 +46,6 @@ def test_load_config_precedence(tmp_path: Path) -> None:
     assert config.s3_prefix == "custom/{package_name_dash}/"
     assert config.git_tag_template == "release.{version}"
     assert config.git_remote == "origin"
-    assert config.git_branch == "main"
     assert config.release_notes_path == "notes.json"
 
 

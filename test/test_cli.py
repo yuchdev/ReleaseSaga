@@ -32,6 +32,13 @@ def test_help_lists_release_flags(capsys: pytest.CaptureFixture[str]) -> None:
     assert "--release-notes-path" in help_text
 
 
+def test_git_branch_flag_removed() -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main(["--git-branch", "main"])
+
+    assert exc_info.value.code == 2
+
+
 def test_cli_uses_explicit_project_dir(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

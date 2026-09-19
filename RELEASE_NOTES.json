@@ -6,6 +6,7 @@
     "1.0.1": {
       "release_notes": [
         "Fixes a bug in the `--mode set-version` command that caused an error when the version was already set in RELEASE_NOTES.json"
+        "Document all code and testcases"
       ]
     },
     "1.0.0": {

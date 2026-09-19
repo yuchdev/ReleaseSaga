@@ -6,11 +6,33 @@ from release_saga.config import load_config, resolve_project_dir
 
 
 def test_load_config_raises_when_pyproject_missing(tmp_path: Path):
+    """[Local] load_config: raises when pyproject missing.
+
+    Scenario:
+        Focus on the `raises when pyproject missing` case for `load_config` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `load_config` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     with pytest.raises(RuntimeError, match="Cannot find"):
         load_config(tmp_path, {})
 
 
 def test_load_config_raises_when_name_or_version_missing(tmp_path: Path):
+    """[Local] load_config: raises when name or version missing.
+
+    Scenario:
+        Focus on the `raises when name or version missing` case for `load_config` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `load_config` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -25,6 +47,17 @@ name = "demo-package"
 
 
 def test_load_config_raises_when_tool_table_is_not_a_table(tmp_path: Path):
+    """[Local] load_config: raises when tool table is not a table.
+
+    Scenario:
+        Focus on the `raises when tool table is not a table` case for `load_config` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `load_config` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -43,6 +76,17 @@ release-saga = "not-a-table"
 
 
 def test_load_config_treats_none_tool_table_as_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """[Local] load_config: treats none tool table as empty.
+
+    Scenario:
+        Focus on the `treats none tool table as empty` case for `load_config` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `load_config` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     monkeypatch.setattr(
         "release_saga.config._load_pyproject",
         lambda project_dir: {
@@ -58,6 +102,17 @@ def test_load_config_treats_none_tool_table_as_empty(tmp_path: Path, monkeypatch
 
 
 def test_load_config_ignores_unknown_keys_and_none_overrides(tmp_path: Path):
+    """[Local] load_config: ignores unknown keys and none overrides.
+
+    Scenario:
+        Focus on the `ignores unknown keys and none overrides` case for `load_config` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `load_config` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -97,6 +152,17 @@ release_notes_path = "notes.json"
 
 
 def test_load_config_precedence(tmp_path: Path):
+    """[Local] load_config: precedence.
+
+    Scenario:
+        Focus on the `precedence` case for `load_config` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `load_config` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     write_pyproject(tmp_path)
 
     config = load_config(
@@ -123,6 +189,17 @@ def test_load_config_precedence(tmp_path: Path):
 
 
 def test_resolve_project_dir_uses_explicit_or_cwd(tmp_path: Path, monkeypatch):
+    """[Local] resolve_project_dir: uses explicit or cwd.
+
+    Scenario:
+        Focus on the `uses explicit or cwd` case for `resolve_project_dir` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `resolve_project_dir` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     other_dir = tmp_path / "other"
     other_dir.mkdir()
     monkeypatch.chdir(tmp_path)

@@ -21,6 +21,17 @@ version = "1.2.3"
 
 
 def test_help_lists_release_flags(capsys: pytest.CaptureFixture[str]):
+    """[Unit] cli: help lists release flags.
+
+    Scenario:
+        Focus on the `help lists release flags` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     with pytest.raises(SystemExit) as exc_info:
         cli.main(["--help"])
 
@@ -37,6 +48,17 @@ def test_help_lists_release_flags(capsys: pytest.CaptureFixture[str]):
 
 
 def test_git_branch_flag_removed():
+    """[Unit] cli: git branch flag removed.
+
+    Scenario:
+        Focus on the `git branch flag removed` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     with pytest.raises(SystemExit) as exc_info:
         cli.main(["--git-branch", "main"])
 
@@ -47,6 +69,17 @@ def test_cli_uses_explicit_project_dir(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] cli: uses explicit project dir.
+
+    Scenario:
+        Focus on the `uses explicit project dir` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     captured: list[Path] = []
@@ -64,6 +97,17 @@ def test_cli_install_mode_cleans_builds_and_installs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] cli: install mode cleans builds and installs.
+
+    Scenario:
+        Focus on the `install mode cleans builds and installs` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     calls: list[str] = []
@@ -83,6 +127,17 @@ def test_cli_dev_mode_installs_editable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] cli: dev mode installs editable.
+
+    Scenario:
+        Focus on the `dev mode installs editable` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     calls: list[str] = []
@@ -102,6 +157,17 @@ def test_cli_reinstall_mode_is_default_and_runs_full_cycle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] cli: reinstall mode is default and runs full cycle.
+
+    Scenario:
+        Focus on the `reinstall mode is default and runs full cycle` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     calls: list[str] = []
@@ -122,6 +188,17 @@ def test_cli_uninstall_mode_skips_release_pipeline(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] cli: uninstall mode skips release pipeline.
+
+    Scenario:
+        Focus on the `uninstall mode skips release pipeline` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     calls: list[str] = []
@@ -140,6 +217,17 @@ def test_cli_runs_release_pipeline_when_steps_selected(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] cli: runs release pipeline when steps selected.
+
+    Scenario:
+        Focus on the `runs release pipeline when steps selected` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     dist_dir = project_dir / "dist"
@@ -166,6 +254,17 @@ def test_cli_version_flag_prints_target_project_version(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ):
+    """[Unit] cli: version flag prints target project version.
+
+    Scenario:
+        Focus on the `version flag prints target project version` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
 
@@ -179,6 +278,17 @@ def test_cli_version_flag_skips_mode_dispatch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] cli: version flag skips mode dispatch.
+
+    Scenario:
+        Focus on the `version flag skips mode dispatch` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
 
@@ -193,6 +303,17 @@ def test_cli_set_version_mode_requires_new_version(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] cli: set version mode requires new version.
+
+    Scenario:
+        Focus on the `set version mode requires new version` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
 
@@ -206,6 +327,17 @@ def test_cli_set_version_mode_calls_set_release_version_and_skips_pipeline(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] cli: set version mode calls set release version and skips pipeline.
+
+    Scenario:
+        Focus on the `set version mode calls set release version and skips pipeline` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     project_dir = tmp_path / "target-project"
     write_project(project_dir)
     calls: list[tuple[str, str]] = []
@@ -239,6 +371,17 @@ def test_cli_set_version_mode_calls_set_release_version_and_skips_pipeline(
 
 
 def test_dunder_main_module_exits_cleanly_on_help(monkeypatch: pytest.MonkeyPatch):
+    """[Integration] __main__: help exits cleanly.
+
+    Scenario:
+        Focus on the `help exits cleanly` case for `__main__` and assert the expected outcome.
+
+    Boundaries:
+        Covers the local integration path between adjacent components while avoiding real external service calls.
+
+    On failure, first check:
+        The `__main__` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     monkeypatch.setattr(sys, "argv", ["release-saga", "--help"])
 
     with pytest.raises(SystemExit) as exc_info:

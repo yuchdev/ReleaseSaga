@@ -48,6 +48,17 @@ def write_release_notes(project_dir: Path, releases: dict):
 def test_set_release_version_updates_pyproject_release_notes_and_lock(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
+    """[Local] set_release_version: updates pyproject release notes and lock.
+
+    Scenario:
+        Focus on the `updates pyproject release notes and lock` case for `set_release_version` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `set_release_version` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     write_pyproject(tmp_path)
     write_release_notes(
         tmp_path,
@@ -83,6 +94,17 @@ def test_set_release_version_updates_pyproject_release_notes_and_lock(
 def test_set_release_version_raises_when_uv_missing_and_does_not_modify_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
+    """[Local] set_release_version: raises when uv missing and does not modify files.
+
+    Scenario:
+        Focus on the `raises when uv missing and does not modify files` case for `set_release_version` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `set_release_version` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     write_pyproject(tmp_path)
     write_release_notes(tmp_path, {"1.2.3": {"release_notes": []}})
     config = make_config(tmp_path)
@@ -99,6 +121,17 @@ def test_set_release_version_raises_when_uv_missing_and_does_not_modify_files(
 def test_set_release_version_leaves_release_notes_untouched_when_entry_already_exists(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
+    """[Local] set_release_version: leaves release notes untouched when entry already exists.
+
+    Scenario:
+        Focus on the `leaves release notes untouched when entry already exists` case for `set_release_version` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `set_release_version` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     write_pyproject(tmp_path)
     write_release_notes(
         tmp_path,
@@ -129,6 +162,17 @@ def test_set_release_version_leaves_release_notes_untouched_when_entry_already_e
 def test_set_release_version_raises_when_pyproject_missing_project_version(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
+    """[Local] set_release_version: raises when pyproject missing project version.
+
+    Scenario:
+        Focus on the `raises when pyproject missing project version` case for `set_release_version` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `set_release_version` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     (tmp_path / "pyproject.toml").write_text(
         '[tool.release-saga]\ns3_bucket = "some-bucket"\n',
         encoding="utf-8",

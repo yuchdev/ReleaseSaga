@@ -33,10 +33,32 @@ class _DummyStep(ReleaseStep):
 
 
 def test_release_step_default_check_returns_none():
+    """[Unit] release_step: default check returns none.
+
+    Scenario:
+        Focus on the `default check returns none` case for `release_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `release_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     assert _DummyStep().check() is None
 
 
 def test_upload_s3_step_reports_missing_bucket(tmp_path: Path):
+    """[Unit] upload_s3_step: reports missing bucket.
+
+    Scenario:
+        Focus on the `reports missing bucket` case for `upload_s3_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `upload_s3_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     wheel = tmp_path / "demo_package-1.2.3-py3-none-any.whl"
     wheel.write_text("wheel", encoding="utf-8")
 
@@ -46,6 +68,17 @@ def test_upload_s3_step_reports_missing_bucket(tmp_path: Path):
 
 
 def test_upload_s3_step_reports_missing_awscli(tmp_path: Path, monkeypatch):
+    """[Unit] upload_s3_step: reports missing AWS CLI.
+
+    Scenario:
+        Focus on the `reports missing AWS CLI` case for `upload_s3_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `upload_s3_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     wheel = tmp_path / "demo_package-1.2.3-py3-none-any.whl"
     wheel.write_text("wheel", encoding="utf-8")
     step = UploadS3Step(make_config(tmp_path, s3_bucket="bucket"), wheel_path=wheel)
@@ -56,6 +89,17 @@ def test_upload_s3_step_reports_missing_awscli(tmp_path: Path, monkeypatch):
 
 
 def test_upload_s3_step_reports_invalid_credentials(tmp_path: Path, monkeypatch):
+    """[Unit] upload_s3_step: reports invalid credentials.
+
+    Scenario:
+        Focus on the `reports invalid credentials` case for `upload_s3_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `upload_s3_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     wheel = tmp_path / "demo_package-1.2.3-py3-none-any.whl"
     wheel.write_text("wheel", encoding="utf-8")
     step = UploadS3Step(make_config(tmp_path, s3_bucket="bucket"), wheel_path=wheel)
@@ -67,6 +111,17 @@ def test_upload_s3_step_reports_invalid_credentials(tmp_path: Path, monkeypatch)
 
 
 def test_upload_s3_step_reports_existing_object(tmp_path: Path, monkeypatch):
+    """[Unit] upload_s3_step: reports existing object.
+
+    Scenario:
+        Focus on the `reports existing object` case for `upload_s3_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `upload_s3_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     wheel = tmp_path / "demo_package-1.2.3-py3-none-any.whl"
     wheel.write_text("wheel", encoding="utf-8")
     step = UploadS3Step(
@@ -91,6 +146,17 @@ def test_upload_s3_step_reports_existing_object(tmp_path: Path, monkeypatch):
 
 
 def test_upload_s3_step_check_passes_when_object_absent(tmp_path: Path, monkeypatch):
+    """[Unit] upload_s3_step: check passes when object absent.
+
+    Scenario:
+        Focus on the `check passes when object absent` case for `upload_s3_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `upload_s3_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     wheel = tmp_path / "demo_package-1.2.3-py3-none-any.whl"
     wheel.write_text("wheel", encoding="utf-8")
     step = UploadS3Step(
@@ -109,6 +175,17 @@ def test_upload_s3_step_check_passes_when_object_absent(tmp_path: Path, monkeypa
 
 
 def test_upload_s3_step_key_defaults_to_wheel_name_when_prefix_empty(tmp_path: Path):
+    """[Unit] upload_s3_step: key defaults to wheel name when prefix empty.
+
+    Scenario:
+        Focus on the `key defaults to wheel name when prefix empty` case for `upload_s3_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `upload_s3_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     wheel = tmp_path / "demo_package-1.2.3-py3-none-any.whl"
     wheel.write_text("wheel", encoding="utf-8")
     step = UploadS3Step(
@@ -120,6 +197,17 @@ def test_upload_s3_step_key_defaults_to_wheel_name_when_prefix_empty(tmp_path: P
 
 
 def test_git_tag_step_reports_missing_git(tmp_path: Path, monkeypatch):
+    """[Unit] git_tag_step: reports missing git.
+
+    Scenario:
+        Focus on the `reports missing git` case for `git_tag_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `git_tag_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = GitTagStep(make_config(tmp_path))
 
     monkeypatch.setattr("release_saga.steps.git_tag.executable_exists", lambda executable: False)
@@ -128,6 +216,17 @@ def test_git_tag_step_reports_missing_git(tmp_path: Path, monkeypatch):
 
 
 def test_git_tag_step_reports_missing_remote_when_git_exists(tmp_path: Path, monkeypatch):
+    """[Unit] git_tag_step: reports missing remote when git exists.
+
+    Scenario:
+        Focus on the `reports missing remote when git exists` case for `git_tag_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `git_tag_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = GitTagStep(make_config(tmp_path))
 
     monkeypatch.setattr("release_saga.steps.git_tag.executable_exists", lambda executable: True)
@@ -137,6 +236,17 @@ def test_git_tag_step_reports_missing_remote_when_git_exists(tmp_path: Path, mon
 
 
 def test_git_tag_step_reports_existing_local_tag(tmp_path: Path, monkeypatch):
+    """[Unit] git_tag_step: reports existing local tag.
+
+    Scenario:
+        Focus on the `reports existing local tag` case for `git_tag_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `git_tag_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = GitTagStep(make_config(tmp_path))
 
     monkeypatch.setattr("release_saga.steps.git_tag.executable_exists", lambda executable: True)
@@ -154,6 +264,17 @@ def test_git_tag_step_reports_existing_local_tag(tmp_path: Path, monkeypatch):
 
 
 def test_git_tag_step_reports_existing_remote_tag(tmp_path: Path, monkeypatch):
+    """[Unit] git_tag_step: reports existing remote tag.
+
+    Scenario:
+        Focus on the `reports existing remote tag` case for `git_tag_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `git_tag_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = GitTagStep(make_config(tmp_path))
 
     monkeypatch.setattr("release_saga.steps.git_tag.executable_exists", lambda executable: True)
@@ -172,6 +293,17 @@ def test_git_tag_step_reports_existing_remote_tag(tmp_path: Path, monkeypatch):
 
 
 def test_git_tag_step_check_passes_when_tag_available(tmp_path: Path, monkeypatch):
+    """[Unit] git_tag_step: check passes when tag available.
+
+    Scenario:
+        Focus on the `check passes when tag available` case for `git_tag_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `git_tag_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = GitTagStep(make_config(tmp_path))
 
     monkeypatch.setattr("release_saga.steps.git_tag.executable_exists", lambda executable: True)
@@ -184,6 +316,17 @@ def test_git_tag_step_check_passes_when_tag_available(tmp_path: Path, monkeypatc
 
 
 def test_git_tag_step_execute_creates_and_pushes_tag(tmp_path: Path, monkeypatch):
+    """[Unit] git_tag_step: execute creates and pushes tag.
+
+    Scenario:
+        Focus on the `execute creates and pushes tag` case for `git_tag_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `git_tag_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = GitTagStep(make_config(tmp_path))
     commands: list[list[str]] = []
 
@@ -203,6 +346,17 @@ def test_git_tag_step_execute_creates_and_pushes_tag(tmp_path: Path, monkeypatch
 
 
 def test_git_tag_step_rollback_only_cleans_up_created_effects(tmp_path: Path, monkeypatch):
+    """[Unit] git_tag_step: rollback only cleans up created effects.
+
+    Scenario:
+        Focus on the `rollback only cleans up created effects` case for `git_tag_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `git_tag_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = GitTagStep(make_config(tmp_path))
     commands: list[list[str]] = []
 
@@ -225,6 +379,17 @@ def test_git_tag_step_rollback_only_cleans_up_created_effects(tmp_path: Path, mo
 
 
 def test_github_release_step_reports_missing_gh_cli(tmp_path: Path, monkeypatch):
+    """[Unit] github_release_step: reports missing gh CLI.
+
+    Scenario:
+        Focus on the `reports missing gh CLI` case for `github_release_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `github_release_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = GitHubReleaseStep(make_config(tmp_path))
 
     monkeypatch.setattr(
@@ -236,6 +401,17 @@ def test_github_release_step_reports_missing_gh_cli(tmp_path: Path, monkeypatch)
 
 
 def test_github_release_step_reports_not_logged_in(tmp_path: Path, monkeypatch):
+    """[Unit] github_release_step: reports not logged in.
+
+    Scenario:
+        Focus on the `reports not logged in` case for `github_release_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `github_release_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = GitHubReleaseStep(make_config(tmp_path))
 
     monkeypatch.setattr(
@@ -254,6 +430,17 @@ def test_github_release_step_reports_missing_release_notes_entry(
     tmp_path: Path,
     monkeypatch,
 ):
+    """[Unit] github_release_step: reports missing release notes entry.
+
+    Scenario:
+        Focus on the `reports missing release notes entry` case for `github_release_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `github_release_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     (tmp_path / "RELEASE_NOTES.json").write_text(
         '{"release": {"download_link": ""}, "releases": {}}',
         encoding="utf-8",
@@ -274,6 +461,17 @@ def test_github_release_step_reports_missing_release_notes_entry(
 
 
 def test_github_release_step_reports_existing_release(tmp_path: Path, monkeypatch):
+    """[Unit] github_release_step: reports existing release.
+
+    Scenario:
+        Focus on the `reports existing release` case for `github_release_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `github_release_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     (tmp_path / "RELEASE_NOTES.json").write_text(
         '{"release": {"download_link": ""}, "releases": {"1.2.3": {"release_notes": []}}}',
         encoding="utf-8",
@@ -297,6 +495,17 @@ def test_github_release_step_check_passes_when_everything_available(
     tmp_path: Path,
     monkeypatch,
 ):
+    """[Unit] github_release_step: check passes when everything available.
+
+    Scenario:
+        Focus on the `check passes when everything available` case for `github_release_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `github_release_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     (tmp_path / "RELEASE_NOTES.json").write_text(
         '{"release": {"download_link": ""}, "releases": {"1.2.3": {"release_notes": []}}}',
         encoding="utf-8",
@@ -317,6 +526,17 @@ def test_github_release_step_check_passes_when_everything_available(
 
 
 def test_tmp_release_notes_exits_when_version_missing(tmp_path: Path):
+    """[Unit] tmp_release_notes: exits when version missing.
+
+    Scenario:
+        Focus on the `exits when version missing` case for `tmp_release_notes` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `tmp_release_notes` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     (tmp_path / "RELEASE_NOTES.json").write_text(
         '{"release": {"download_link": ""}, "releases": {}}',
         encoding="utf-8",
@@ -330,6 +550,17 @@ def test_tmp_release_notes_exits_when_version_missing(tmp_path: Path):
 
 
 def test_tmp_release_notes_writes_notes_and_download_link(tmp_path: Path):
+    """[Unit] tmp_release_notes: writes notes and download link.
+
+    Scenario:
+        Focus on the `writes notes and download link` case for `tmp_release_notes` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `tmp_release_notes` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     (tmp_path / "RELEASE_NOTES.json").write_text(
         json.dumps(
             {
@@ -355,6 +586,17 @@ def test_github_release_step_execute_creates_release_and_cleans_up_notes_file(
     tmp_path: Path,
     monkeypatch,
 ):
+    """[Unit] github_release_step: execute creates release and cleans up notes file.
+
+    Scenario:
+        Focus on the `execute creates release and cleans up notes file` case for `github_release_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `github_release_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     (tmp_path / "RELEASE_NOTES.json").write_text(
         json.dumps(
             {
@@ -387,6 +629,17 @@ def test_github_release_step_rollback_only_deletes_created_release(
     tmp_path: Path,
     monkeypatch,
 ):
+    """[Unit] github_release_step: rollback only deletes created release.
+
+    Scenario:
+        Focus on the `rollback only deletes created release` case for `github_release_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `github_release_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = GitHubReleaseStep(make_config(tmp_path))
     commands: list[list[str]] = []
 
@@ -403,6 +656,17 @@ def test_github_release_step_rollback_only_deletes_created_release(
 
 
 def test_upload_s3_step_uses_normalized_object_key(tmp_path: Path, monkeypatch):
+    """[Unit] upload_s3_step: uses normalized object key.
+
+    Scenario:
+        Focus on the `uses normalized object key` case for `upload_s3_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `upload_s3_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     wheel = tmp_path / "demo_package-1.2.3-py3-none-any.whl"
     wheel.write_text("wheel", encoding="utf-8")
     step = UploadS3Step(
@@ -439,6 +703,17 @@ def test_upload_s3_step_uses_normalized_object_key(tmp_path: Path, monkeypatch):
 
 
 def test_upload_s3_step_strips_leading_slashes_from_prefix(tmp_path: Path):
+    """[Unit] upload_s3_step: strips leading slashes from prefix.
+
+    Scenario:
+        Focus on the `strips leading slashes from prefix` case for `upload_s3_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `upload_s3_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     wheel = tmp_path / "demo_package-1.2.3-py3-none-any.whl"
     wheel.write_text("wheel", encoding="utf-8")
     step = UploadS3Step(
@@ -450,6 +725,17 @@ def test_upload_s3_step_strips_leading_slashes_from_prefix(tmp_path: Path):
 
 
 def test_publish_pypi_step_reports_missing_twine(tmp_path: Path, monkeypatch):
+    """[Unit] publish_pypi_step: reports missing twine.
+
+    Scenario:
+        Focus on the `reports missing twine` case for `publish_pypi_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `publish_pypi_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = PublishPyPiStep(make_config(tmp_path))
 
     monkeypatch.setattr(
@@ -464,6 +750,17 @@ def test_publish_pypi_step_reports_missing_pypirc(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] publish_pypi_step: reports missing .pypirc.
+
+    Scenario:
+        Focus on the `reports missing .pypirc` case for `publish_pypi_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `publish_pypi_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     monkeypatch.setenv("HOME", str(tmp_path))
     step = PublishPyPiStep(make_config(tmp_path))
 
@@ -479,6 +776,17 @@ def test_publish_pypi_step_check_passes_when_pypirc_exists(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] publish_pypi_step: check passes when .pypirc exists.
+
+    Scenario:
+        Focus on the `check passes when .pypirc exists` case for `publish_pypi_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `publish_pypi_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     monkeypatch.setenv("HOME", str(tmp_path))
     (tmp_path / ".pypirc").write_text("", encoding="utf-8")
     step = PublishPyPiStep(make_config(tmp_path))
@@ -492,6 +800,17 @@ def test_publish_pypi_step_check_passes_when_pypirc_exists(
 
 
 def test_publish_pypi_step_execute_raises_when_no_distributions(tmp_path: Path):
+    """[Unit] publish_pypi_step: execute raises when no distributions.
+
+    Scenario:
+        Focus on the `execute raises when no distributions` case for `publish_pypi_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `publish_pypi_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = PublishPyPiStep(make_config(tmp_path, publish_glob="dist/*"))
 
     with pytest.raises(FileNotFoundError):
@@ -502,6 +821,17 @@ def test_publish_pypi_step_rollback_logs_manual_yank_warning(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ):
+    """[Unit] publish_pypi_step: rollback logs manual yank warning.
+
+    Scenario:
+        Focus on the `rollback logs manual yank warning` case for `publish_pypi_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `publish_pypi_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     step = PublishPyPiStep(make_config(tmp_path))
 
     step.rollback()
@@ -510,6 +840,17 @@ def test_publish_pypi_step_rollback_logs_manual_yank_warning(
 
 
 def test_publish_pypi_step_expands_distribution_glob(tmp_path: Path, monkeypatch):
+    """[Unit] publish_pypi_step: expands distribution glob.
+
+    Scenario:
+        Focus on the `expands distribution glob` case for `publish_pypi_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `publish_pypi_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
     wheel = dist_dir / "demo_package-1.2.3-py3-none-any.whl"

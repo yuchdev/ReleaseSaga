@@ -15,6 +15,17 @@ import release_saga.steps.s3
 
 
 def test_public_api_reexports_match_source_modules():
+    """[Unit] public_api: reexports match source modules.
+
+    Scenario:
+        Focus on the `reexports match source modules` case for `public_api` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `public_api` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     assert release_saga.ReleaseStep is release_saga.steps.base.ReleaseStep
     assert release_saga.ReleaseConfig is release_saga.config.ReleaseConfig
     assert release_saga.load_config is release_saga.config.load_config
@@ -25,12 +36,34 @@ def test_public_api_reexports_match_source_modules():
 
 
 def test_public_api_keeps_version():
+    """[Unit] __version__: export stays a string.
+
+    Scenario:
+        Focus on the `export stays a string` case for `__version__` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `__version__` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     assert isinstance(release_saga.__version__, str)
 
 
 def test_version_falls_back_when_package_metadata_missing(
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """[Unit] __version__: falls back when package metadata is missing.
+
+    Scenario:
+        Focus on the `falls back when package metadata is missing` case for `__version__` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `__version__` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     def raise_not_found(name: str):
         raise PackageNotFoundError(name)
 
@@ -45,6 +78,17 @@ def test_version_falls_back_when_package_metadata_missing(
 
 
 def test_steps_package_reexports_concrete_steps():
+    """[Unit] steps_package: reexports concrete step classes.
+
+    Scenario:
+        Focus on the `reexports concrete step classes` case for `steps_package` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `steps_package` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     assert release_saga.steps.GitTagStep is release_saga.steps.git_tag.GitTagStep
     assert release_saga.steps.GitHubReleaseStep is release_saga.steps.github_release.GitHubReleaseStep
     assert release_saga.steps.PublishPyPiStep is release_saga.steps.pypi_publish.PublishPyPiStep

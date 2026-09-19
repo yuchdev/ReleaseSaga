@@ -27,6 +27,17 @@ def write_wheel(project_dir: Path):
 
 
 def test_build_release_steps_no_flags_returns_empty_list(tmp_path: Path):
+    """[Unit] build_release_steps: no flags returns an empty step list.
+
+    Scenario:
+        Focus on the `no flags returns an empty step list` case for `build_release_steps` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `build_release_steps` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     steps = build_release_steps(
         make_config(tmp_path),
         upload_s3=False,
@@ -38,6 +49,17 @@ def test_build_release_steps_no_flags_returns_empty_list(tmp_path: Path):
 
 
 def test_build_release_steps_upload_s3_only(tmp_path: Path):
+    """[Unit] build_release_steps: upload S3 flag adds only the upload step.
+
+    Scenario:
+        Focus on the `upload S3 flag adds only the upload step` case for `build_release_steps` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `build_release_steps` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     write_wheel(tmp_path)
 
     steps = build_release_steps(
@@ -52,6 +74,17 @@ def test_build_release_steps_upload_s3_only(tmp_path: Path):
 
 
 def test_build_release_steps_create_release_only(tmp_path: Path):
+    """[Unit] build_release_steps: create release flag adds tag and release steps.
+
+    Scenario:
+        Focus on the `create release flag adds tag and release steps` case for `build_release_steps` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `build_release_steps` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     steps = build_release_steps(
         make_config(tmp_path),
         upload_s3=False,
@@ -65,6 +98,17 @@ def test_build_release_steps_create_release_only(tmp_path: Path):
 
 
 def test_build_release_steps_publish_pypi_only(tmp_path: Path):
+    """[Unit] build_release_steps: publish PyPI flag adds only the publish step.
+
+    Scenario:
+        Focus on the `publish PyPI flag adds only the publish step` case for `build_release_steps` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `build_release_steps` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     steps = build_release_steps(
         make_config(tmp_path),
         upload_s3=False,
@@ -77,6 +121,17 @@ def test_build_release_steps_publish_pypi_only(tmp_path: Path):
 
 
 def test_build_release_steps_all_flags_full_order(tmp_path: Path):
+    """[Unit] build_release_steps: all flags preserve the full step order.
+
+    Scenario:
+        Focus on the `all flags preserve the full step order` case for `build_release_steps` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `build_release_steps` branch for this case and the fixtures or monkeypatches that establish it.
+    """
     write_wheel(tmp_path)
 
     steps = build_release_steps(

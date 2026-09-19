@@ -198,7 +198,7 @@ wheels = [
 
 [[package]]
 name = "release-saga"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "." }
 
 [package.dev-dependencies]

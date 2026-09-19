@@ -213,11 +213,3 @@ The example above hand-builds its step list from scratch. If you also want the C
 one — without reimplementing that wiring yourself — see
 [Writing a custom release step](docs/tutorials/custom-release-step.md), which reuses
 `build_arg_parser()` and `build_release_steps()` from the library.
-
-## Competitive comparison
-
-<!-- Milestone 0004, Task 04.0 -->
-
-## Migration from `release_package.py`
-
-<!-- Milestone 0004, Task 04.0 -->

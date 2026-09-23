@@ -108,17 +108,26 @@ class RunHistory:
         ) as handle:
             json.dump(self.data, handle, indent=2)
             handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
             temporary_path = Path(handle.name)
         try:
             os.replace(temporary_path, self.path)
         finally:
             temporary_path.unlink(missing_ok=True)
 
-    def set_step_status(self, index: int, status: str):
+    def set_step_status(
+        self,
+        index: int,
+        status: str,
+        recovery_data: Optional[dict[str, Any]] = None,
+    ):
         """Update one step and persist the record."""
         step = self.data["steps"][index]
         step["status"] = status
         step[f"{status}_at"] = _now()
+        if recovery_data is not None:
+            step["recovery_data"] = recovery_data
         self.save()
 
     def set_status(self, status: str):

@@ -15,12 +15,13 @@ class RecordingStep(ReleaseStep):
 
     def execute(self):
         self.events.append("execute")
+        self.recovery_value = "after execute"
 
     def rollback(self):
         self.events.append("rollback")
 
     def recovery_data(self):
-        return {"value": "persisted"}
+        return {"value": getattr(self, "recovery_value", "before execute")}
 
     def prepare_rollback(self, recovery_data):
         self.events.append(f"prepare:{recovery_data['value']}")
@@ -47,7 +48,7 @@ def test_pipeline_persists_completed_run(tmp_path: Path, monkeypatch):
     data = json.loads(records[0].read_text(encoding="utf-8"))
     assert data["status"] == "completed"
     assert data["steps"][0]["status"] == "completed"
-    assert data["steps"][0]["recovery_data"] == {"value": "persisted"}
+    assert data["steps"][0]["recovery_data"] == {"value": "after execute"}
 
 
 def test_clean_release_run_rolls_back_completed_steps_in_reverse(tmp_path: Path, monkeypatch):
@@ -63,7 +64,7 @@ def test_clean_release_run_rolls_back_completed_steps_in_reverse(tmp_path: Path,
 
     clean_release_run([first, second], history)
 
-    assert events == ["prepare:persisted", "prepare:persisted", "rollback", "rollback"]
+    assert events == ["prepare:before execute", "prepare:before execute", "rollback", "rollback"]
     assert history.data["status"] == "rolled_back"
     assert [step["status"] for step in history.data["steps"]] == ["rolled_back", "rolled_back"]
 

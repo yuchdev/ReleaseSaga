@@ -93,7 +93,7 @@ def run_release_pipeline(steps: list[ReleaseStep], config: Optional[ReleaseConfi
             _log(f"Completed: {step.name}")
             completed.append((index, step))
             if history is not None:
-                history.set_step_status(index, "completed")
+                history.set_step_status(index, "completed", step.recovery_data())
 
     if history is not None:
         history.set_status("completed")

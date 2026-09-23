@@ -7,6 +7,7 @@ import release_saga
 import release_saga.cli
 import release_saga.config
 import release_saga.pipeline
+import release_saga.plugins
 import release_saga.steps
 import release_saga.steps.git_tag
 import release_saga.steps.github_release
@@ -33,6 +34,11 @@ def test_public_api_reexports_match_source_modules():
     assert release_saga.run_release_pipeline is release_saga.pipeline.run_release_pipeline
     assert release_saga.build_arg_parser is release_saga.cli.build_arg_parser
     assert release_saga.build_release_steps is release_saga.cli.build_release_steps
+    assert release_saga.PluginLoadError is release_saga.plugins.PluginLoadError
+    assert release_saga.load_plugin_steps is release_saga.plugins.load_plugin_steps
+    assert release_saga.load_configured_steps is release_saga.plugins.load_configured_steps
+    assert release_saga.discover_entry_point_steps is release_saga.plugins.discover_entry_point_steps
+    assert release_saga.resolve_plugin_spec is release_saga.plugins.resolve_plugin_spec
 
 
 def test_public_api_keeps_version():

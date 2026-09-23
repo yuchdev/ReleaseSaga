@@ -120,6 +120,36 @@ def test_build_release_steps_publish_pypi_only(tmp_path: Path):
     assert isinstance(steps[0], PublishPyPiStep)
 
 
+def test_build_release_steps_inserts_plugin_steps_before_pypi(tmp_path: Path):
+    """[Unit] build_release_steps: plugin steps run after built-ins, before PyPI publish.
+
+    Scenario:
+        Focus on the `plugin steps run after built-ins, before PyPI publish` case for `build_release_steps` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `build_release_steps` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    class FakePluginStep:
+        pass
+
+    plugin_step = FakePluginStep()
+    steps = build_release_steps(
+        make_config(tmp_path),
+        upload_s3=False,
+        create_release=True,
+        publish_pypi=True,
+        plugin_steps=[plugin_step],
+    )
+
+    assert isinstance(steps[0], GitTagStep)
+    assert isinstance(steps[1], GitHubReleaseStep)
+    assert steps[2] is plugin_step
+    assert isinstance(steps[3], PublishPyPiStep)
+
+
 def test_build_release_steps_all_flags_full_order(tmp_path: Path):
     """[Unit] build_release_steps: all flags preserve the full step order.
 

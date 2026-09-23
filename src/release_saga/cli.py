@@ -17,6 +17,7 @@ from release_saga.package_ops import (
     uninstall_wheel,
 )
 from release_saga.pipeline import run_release_pipeline
+from release_saga.plugins import PluginLoadError, load_plugin_steps
 from release_saga.steps.base import ReleaseStep
 from release_saga.steps.git_tag import GitTagStep
 from release_saga.steps.github_release import GitHubReleaseStep
@@ -69,6 +70,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=False,
         required=False,
     )
+    parser.add_argument(
+        "--no-plugins",
+        help="Disable loading plugin steps (both [tool.release-saga] extra_steps and entry points)",
+        action="store_true",
+        required=False,
+    )
     parser.add_argument("--project-dir", type=Path, default=None)
     parser.add_argument("--wheel-glob", default=None)
     parser.add_argument("--publish-glob", default=None)
@@ -86,6 +93,7 @@ def build_release_steps(
     upload_s3: bool,
     create_release: bool,
     publish_pypi: bool,
+    plugin_steps: Optional[list[ReleaseStep]] = None,
 ) -> list[ReleaseStep]:
     """Assemble the built-in release steps selected by CLI flags.
 
@@ -93,6 +101,8 @@ def build_release_steps(
     :param upload_s3: Whether to include the S3 upload step.
     :param create_release: Whether to include git tagging and GitHub release creation.
     :param publish_pypi: Whether to include the PyPI publishing step.
+    :param plugin_steps: Plugin-provided steps (see `release_saga.plugins`) to run after the
+        built-in S3/git/GitHub steps but before the irreversible PyPI publish step.
     :returns: Release step instances in the order they must run.
     """
     steps: list[ReleaseStep] = []
@@ -101,6 +111,8 @@ def build_release_steps(
     if create_release:
         steps.append(GitTagStep(config))
         steps.append(GitHubReleaseStep(config))
+    if plugin_steps:
+        steps.extend(plugin_steps)
     if publish_pypi:
         steps.append(PublishPyPiStep(config))
     return steps
@@ -169,11 +181,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         uninstall_wheel(config)
 
     if args.mode != "uninstall":
+        plugin_steps: list[ReleaseStep] = []
+        if not args.no_plugins:
+            try:
+                plugin_steps = load_plugin_steps(config)
+            except PluginLoadError as exc:
+                parser.error(str(exc))
+
         steps = build_release_steps(
             config,
             upload_s3=args.upload_s3,
             create_release=args.create_release,
             publish_pypi=args.publish_pypi,
+            plugin_steps=plugin_steps,
         )
         if steps:
             run_release_pipeline(steps)

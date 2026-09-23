@@ -249,6 +249,135 @@ def test_cli_runs_release_pipeline_when_steps_selected(
     assert calls == [["UploadS3Step"]]
 
 
+def test_cli_loads_configured_extra_steps_into_pipeline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """[Unit] cli: loads configured extra_steps into the release pipeline.
+
+    Scenario:
+        Focus on the `loads configured extra_steps into the release pipeline` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    (project_dir / "release_steps.py").write_text(
+        """
+from release_saga.steps.base import ReleaseStep
+
+
+class ChangelogStep(ReleaseStep):
+    name = "update changelog"
+
+    def __init__(self, config):
+        self.config = config
+
+    def execute(self):
+        pass
+
+    def rollback(self):
+        pass
+""",
+        encoding="utf-8",
+    )
+    (project_dir / "pyproject.toml").write_text(
+        (project_dir / "pyproject.toml").read_text(encoding="utf-8")
+        + '\n[tool.release-saga]\nextra_steps = ["release_steps.py:ChangelogStep"]\n',
+        encoding="utf-8",
+    )
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(cli, "sanity_check", lambda config: None)
+    monkeypatch.setattr(cli, "build_wheel", lambda config: None)
+    monkeypatch.setattr(
+        cli,
+        "run_release_pipeline",
+        lambda steps: calls.append([type(step).__name__ for step in steps]),
+    )
+
+    exit_code = cli.main(["--mode", "build", "--project-dir", str(project_dir)])
+
+    assert exit_code == 0
+    assert calls == [["ChangelogStep"]]
+
+
+def test_cli_no_plugins_flag_skips_extra_steps(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """[Unit] cli: --no-plugins flag skips extra_steps loading entirely.
+
+    Scenario:
+        Focus on the `--no-plugins flag skips extra_steps loading entirely` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    (project_dir / "pyproject.toml").write_text(
+        (project_dir / "pyproject.toml").read_text(encoding="utf-8")
+        + '\n[tool.release-saga]\nextra_steps = ["missing_module.py:MissingStep"]\n',
+        encoding="utf-8",
+    )
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(cli, "sanity_check", lambda config: None)
+    monkeypatch.setattr(cli, "build_wheel", lambda config: None)
+    monkeypatch.setattr(
+        cli,
+        "run_release_pipeline",
+        lambda steps: calls.append([type(step).__name__ for step in steps]),
+    )
+
+    exit_code = cli.main(["--mode", "build", "--project-dir", str(project_dir), "--no-plugins"])
+
+    assert exit_code == 0
+    assert calls == []
+
+
+def test_cli_plugin_load_error_exits_with_usage_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+):
+    """[Unit] cli: a broken extra_steps entry causes a clean argument-error exit.
+
+    Scenario:
+        Focus on the `a broken extra_steps entry causes a clean argument-error exit` case for `cli` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `cli` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    (project_dir / "pyproject.toml").write_text(
+        (project_dir / "pyproject.toml").read_text(encoding="utf-8")
+        + '\n[tool.release-saga]\nextra_steps = ["missing_module.py:MissingStep"]\n',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(cli, "sanity_check", lambda config: None)
+    monkeypatch.setattr(cli, "build_wheel", lambda config: None)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main(["--mode", "build", "--project-dir", str(project_dir)])
+
+    assert exc_info.value.code == 2
+    assert "Plugin file not found" in capsys.readouterr().err
+
+
 def test_cli_version_flag_prints_target_project_version(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

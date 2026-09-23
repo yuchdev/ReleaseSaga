@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
@@ -23,6 +23,8 @@ class ReleaseConfig:
     :param git_tag_template: Format string used to build the git tag name.
     :param git_remote: Git remote name used for tag pushes.
     :param release_notes_path: Relative path to the release-notes JSON file.
+    :param extra_steps: Ordered plugin specs (``"path_or_module:ClassName"``) loaded into the
+        pipeline; list order is the step's priority/position among plugin-provided steps.
     """
     project_dir: Path
     package_name: str
@@ -35,6 +37,7 @@ class ReleaseConfig:
     git_tag_template: str = "v{version}"
     git_remote: str = "origin"
     release_notes_path: str = "RELEASE_NOTES.json"
+    extra_steps: tuple[str, ...] = field(default_factory=tuple)
 
 
 def resolve_project_dir(explicit: Optional[Path]) -> Path:
@@ -92,11 +95,17 @@ def load_config(project_dir: Path, cli_overrides: dict[str, Any]) -> ReleaseConf
         "git_tag_template": "v{version}",
         "git_remote": "origin",
         "release_notes_path": "RELEASE_NOTES.json",
+        "extra_steps": (),
     }
     for source in (tool_table, cli_overrides):
         for key, value in source.items():
             if key in values and value is not None:
                 values[key] = value
+
+    extra_steps = values["extra_steps"]
+    if not isinstance(extra_steps, (list, tuple)) or not all(isinstance(item, str) for item in extra_steps):
+        raise RuntimeError("[tool.release-saga] extra_steps must be a list of strings")
+    values["extra_steps"] = tuple(extra_steps)
 
     package_name_text = str(package_name)
     version_text = str(version)

@@ -37,6 +37,7 @@ Precedence is: CLI flag > `[tool.release-saga]` > built-in default.
 | `git_tag_template`   | `--git-tag-template`   | `v{version}`           | `str.format()` template with `version`                              |
 | `git_remote`         | `--git-remote`         | `origin`               | Git remote used for tag pushes                                      |
 | `release_notes_path` | `--release-notes-path` | `RELEASE_NOTES.json`   | Relative to the target project root                                 |
+| `extra_steps`        | *(none)*               | `[]`                   | Plugin steps to load, as `"path_or_module:ClassName"`; list order is priority — see [Extending with custom steps](#extending-with-custom-steps) |
 
 Example target-project configuration:
 
@@ -117,9 +118,7 @@ tag, and only deletes the local tag if it created one. Keep this in mind when wr
 
 ## Extending with custom steps
 
-There's no plugin/entry-point loading yet — `release-saga`'s CLI only wires up the four steps
-above. To run your own steps (in the same pipeline, with the same rollback guarantees), subclass
-`ReleaseStep` and call `run_release_pipeline()` yourself. The contract is exactly three methods:
+A custom step is a `ReleaseStep` subclass with exactly three methods:
 
 - `check() -> str | None` — return `None` if the step can run now, otherwise a short reason it
   can't. Called before `execute()`; also called again on every step *after* this one before that
@@ -129,13 +128,21 @@ above. To run your own steps (in the same pipeline, with the same rollback guara
 - `rollback() -> None` — best-effort undo. Only called for steps that actually executed (or that
   raised mid-`execute()`), never for steps that were skipped by a failed `check()`.
 
-```python
-from pathlib import Path
+**The recommended way to add one is plugin loading** — `release-saga` discovers and runs it
+automatically, with no CLI reimplementation and no reload of the CLI tool required:
 
-from release_saga.config import load_config, resolve_project_dir
-from release_saga.pipeline import run_release_pipeline
+```toml
+# pyproject.toml, in the target project
+[tool.release-saga]
+# "path_or_module:ClassName"; a relative path resolves against project_dir.
+# List order is priority — steps run in this order, after the built-in S3/git/GitHub
+# steps but before the (irreversible) PyPI publish step.
+extra_steps = ["release_steps.py:ChangelogStep"]
+```
+
+```python
+# release_steps.py, next to pyproject.toml
 from release_saga.steps.base import ReleaseStep
-from release_saga.steps.git_tag import GitTagStep
 
 
 class ChangelogStep(ReleaseStep):
@@ -163,32 +170,32 @@ class ChangelogStep(ReleaseStep):
     def rollback(self):
         if self._original is not None:
             self._path.write_text(self._original, encoding="utf-8")
+```
 
+That's it — no reload of `release-saga`, no wrapper script. `release-saga --create-release` now
+also runs `ChangelogStep`, with full Saga rollback across all three steps. A step meant to be
+shared across projects instead of copy-pasted into each one's `pyproject.toml` can be published as
+its own pip-installable package registering a `release_saga.steps` entry point; `release-saga`
+discovers every installed package's entry points in that group automatically. Pass `--no-plugins`
+to disable both mechanisms at once. See
+[Writing a custom release step](docs/tutorials/custom-release-step.md) for the full walkthrough
+of both plugin mechanisms, their failure modes, and more examples.
 
-class SlackNotifyStep(ReleaseStep):
-    """Post to Slack; rollback deletes the message if one was posted."""
+**There's also an older way**, predating plugin loading: subclass `ReleaseStep` and call
+`run_release_pipeline()` yourself. It's still supported, and still the right tool for a bespoke,
+one-off release script that isn't worth an `extra_steps` entry — see
+["Manual pipeline wiring" in the tutorial](docs/tutorials/custom-release-step.md#option-2-manual-pipeline-wiring-older-still-supported)
+for the full version, including how to reuse `build_arg_parser()` and `build_release_steps()` to
+avoid reimplementing the CLI's own flags:
 
-    name = "notify Slack"
+```python
+from pathlib import Path
 
-    def __init__(self, config, webhook_url: str):
-        self.config = config
-        self.webhook_url = webhook_url
-        self._posted = False
+from release_saga.config import load_config, resolve_project_dir
+from release_saga.pipeline import run_release_pipeline
+from release_saga.steps.git_tag import GitTagStep
 
-    def check(self) -> str | None:
-        if not self.webhook_url:
-            return "no Slack webhook configured"
-        return None
-
-    def execute(self):
-        # post_to_slack(self.webhook_url, f"Released {self.config.version}")
-        self._posted = True
-
-    def rollback(self):
-        if self._posted:
-            # post_to_slack(self.webhook_url, f"Release {self.config.version} rolled back")
-            pass
-
+from mymodule import ChangelogStep
 
 project_dir = resolve_project_dir(Path.cwd())
 config = load_config(project_dir, cli_overrides={})
@@ -196,20 +203,7 @@ config = load_config(project_dir, cli_overrides={})
 run_release_pipeline(
     [
         ChangelogStep(config),
-        GitTagStep(config),          # mix in a built-in step wherever it belongs in the order
-        SlackNotifyStep(config, webhook_url="https://hooks.slack.example/..."),
+        GitTagStep(config),  # mix in a built-in step wherever it belongs in the order
     ]
 )
 ```
-
-`ChangelogStep` shows the common pattern for a step whose rollback needs a prior state (it snapshots
-the file before mutating it). `SlackNotifyStep` shows the common pattern for a step whose
-`execute()` may or may not have "really" happened by the time something later fails (it tracks
-`_posted` so `rollback()` only fires if `execute()` got far enough to matter) — the same technique
-`GitTagStep` and `GitHubReleaseStep` use for their own partial-success tracking.
-
-The example above hand-builds its step list from scratch. If you also want the CLI's own
-`--upload-s3`/`--create-release`/`--publish-pypi` flags and built-in steps alongside your custom
-one — without reimplementing that wiring yourself — see
-[Writing a custom release step](docs/tutorials/custom-release-step.md), which reuses
-`build_arg_parser()` and `build_release_steps()` from the library.

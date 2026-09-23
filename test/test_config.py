@@ -188,6 +188,95 @@ def test_load_config_precedence(tmp_path: Path):
     assert config.release_notes_path == "notes.json"
 
 
+def test_load_config_defaults_extra_steps_to_empty_tuple(tmp_path: Path):
+    """[Local] load_config: defaults extra_steps to an empty tuple.
+
+    Scenario:
+        Focus on the `defaults extra_steps to an empty tuple` case for `load_config` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `load_config` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "demo-package"
+version = "1.2.3"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = load_config(tmp_path, {})
+
+    assert config.extra_steps == ()
+
+
+def test_load_config_reads_extra_steps_list_and_preserves_order(tmp_path: Path):
+    """[Local] load_config: reads extra_steps list and preserves order.
+
+    Scenario:
+        Focus on the `reads extra_steps list and preserves order` case for `load_config` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `load_config` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "demo-package"
+version = "1.2.3"
+
+[tool.release-saga]
+extra_steps = ["release_steps.py:ChangelogStep", "release_steps.py:SlackNotifyStep"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = load_config(tmp_path, {})
+
+    assert config.extra_steps == (
+        "release_steps.py:ChangelogStep",
+        "release_steps.py:SlackNotifyStep",
+    )
+
+
+def test_load_config_raises_when_extra_steps_is_not_a_list_of_strings(tmp_path: Path):
+    """[Local] load_config: raises when extra_steps is not a list of strings.
+
+    Scenario:
+        Focus on the `raises when extra_steps is not a list of strings` case for `load_config` and assert the expected outcome.
+
+    Boundaries:
+        Covers temporary local files, directories, or subprocess arguments without performing a real release.
+
+    On failure, first check:
+        The `load_config` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "demo-package"
+version = "1.2.3"
+
+[tool.release-saga]
+extra_steps = [1, 2]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="extra_steps must be a list of strings"):
+        load_config(tmp_path, {})
+
+
 def test_resolve_project_dir_uses_explicit_or_cwd(tmp_path: Path, monkeypatch):
     """[Local] resolve_project_dir: uses explicit or cwd.
 

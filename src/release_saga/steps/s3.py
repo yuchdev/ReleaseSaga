@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from subprocess import run
+from typing import Any
 
 from release_saga.config import ReleaseConfig
 from release_saga.package_ops import command_ok, executable_exists, resolve_wheel_path
@@ -28,6 +29,8 @@ class UploadS3Step(ReleaseStep):
         """
         self.config = config
         self.wheel_path = wheel_path or resolve_wheel_path(config)
+        self._rollback_bucket: str | None = None
+        self._rollback_key: str | None = None
 
     def _prefix(self) -> str:
         """Render the configured S3 key prefix.
@@ -95,13 +98,28 @@ class UploadS3Step(ReleaseStep):
             cwd=self.config.project_dir,
         )
 
+    def recovery_data(self) -> dict[str, Any]:
+        """Capture the exact S3 location needed by a later clean operation."""
+        return {"bucket": self.config.s3_bucket, "key": self._key()}
+
+    def prepare_rollback(self, recovery_data: dict[str, Any]):
+        """Restore the exact S3 location used by the interrupted run."""
+        self._rollback_bucket = str(recovery_data["bucket"])
+        self._rollback_key = str(recovery_data["key"])
+
     def rollback(self):
         """Delete the S3 object uploaded by this run.
 
         :raises CalledProcessError: If the AWS CLI delete command fails.
         """
         run(
-            ["aws", "s3", "rm", f"s3://{self.config.s3_bucket}/{self._key()}"],
+            [
+                "aws",
+                "s3",
+                "rm",
+                f"s3://{self._rollback_bucket or self.config.s3_bucket}/"
+                f"{self._rollback_key or self._key()}",
+            ],
             check=True,
             cwd=self.config.project_dir,
         )

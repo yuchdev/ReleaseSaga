@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class ReleaseStep(ABC):
@@ -21,6 +22,14 @@ class ReleaseStep(ABC):
         :returns: ``None`` when the step is ready, otherwise a message explaining why it cannot run.
         """
         return None
+
+    def recovery_data(self) -> dict[str, Any]:
+        """Return JSON-serializable data needed to reconstruct rollback state."""
+        return {}
+
+    def prepare_rollback(self, recovery_data: dict[str, Any]):
+        """Restore state needed to roll back work completed in an earlier process."""
+        del recovery_data
 
     @abstractmethod
     def execute(self):

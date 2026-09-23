@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from subprocess import run
 from tempfile import NamedTemporaryFile
+from typing import Any
 
 from release_saga.config import ReleaseConfig
 from release_saga.package_ops import command_ok, executable_exists, resolve_wheel_path
@@ -28,6 +29,7 @@ class GitHubReleaseStep(ReleaseStep):
         """
         self.config = config
         self._created_release = False
+        self._rollback_tag: str | None = None
 
     def _tag(self) -> str:
         """Render the git tag name for the configured release.
@@ -140,6 +142,15 @@ class GitHubReleaseStep(ReleaseStep):
         finally:
             release_file.unlink(missing_ok=True)
 
+    def recovery_data(self) -> dict[str, Any]:
+        """Capture the release tag needed by a later clean operation."""
+        return {"tag": self._tag()}
+
+    def prepare_rollback(self, recovery_data: dict[str, Any]):
+        """Restore successful release creation state from persisted history."""
+        self._rollback_tag = str(recovery_data["tag"])
+        self._created_release = True
+
     def rollback(self):
         """Delete the GitHub Release created by this run, if any.
 
@@ -147,7 +158,7 @@ class GitHubReleaseStep(ReleaseStep):
         """
         if self._created_release:
             run(
-                ["gh", "release", "delete", self._tag(), "--yes"],
+                ["gh", "release", "delete", self._rollback_tag or self._tag(), "--yes"],
                 check=True,
                 cwd=self.config.project_dir,
             )

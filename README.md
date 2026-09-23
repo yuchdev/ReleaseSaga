@@ -84,6 +84,20 @@ For each step, the pipeline:
 3. Rollback is best-effort: if a step's `rollback()` itself raises, the pipeline logs a warning and
    keeps rolling back the rest rather than aborting the rollback.
 
+Each CLI-driven pipeline run is also recorded under
+`$XDG_DATA_HOME/release-saga/<package>/<version>/` (or
+`~/.local/share/release-saga/<package>/<version>/`). If the process is interrupted after one or
+more steps complete, rerun from the same target project with:
+
+```bash
+release-saga --mode clean
+```
+
+This finds the newest incomplete run for the target project's current version and retries rollback
+for its completed steps in reverse order. Plugin steps that keep in-memory rollback state can
+implement `recovery_data()` and `prepare_rollback()` to persist and restore that state; stateless
+plugin rollback needs no additional methods.
+
 Configuration flows from `config.py:load_config()`, which reads the target project's
 `pyproject.toml` (`[project].name`/`.version` are required, `[tool.release-saga]` is optional) and
 merges values in precedence order: built-in default → `[tool.release-saga]` → CLI flag.

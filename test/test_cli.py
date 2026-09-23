@@ -240,7 +240,7 @@ def test_cli_runs_release_pipeline_when_steps_selected(
     monkeypatch.setattr(
         cli,
         "run_release_pipeline",
-        lambda steps: calls.append([type(step).__name__ for step in steps]),
+        lambda steps, config=None: calls.append([type(step).__name__ for step in steps]),
     )
 
     exit_code = cli.main(["--mode", "build", "--project-dir", str(project_dir), "--upload-s3"])
@@ -297,7 +297,7 @@ class ChangelogStep(ReleaseStep):
     monkeypatch.setattr(
         cli,
         "run_release_pipeline",
-        lambda steps: calls.append([type(step).__name__ for step in steps]),
+        lambda steps, config=None: calls.append([type(step).__name__ for step in steps]),
     )
 
     exit_code = cli.main(["--mode", "build", "--project-dir", str(project_dir)])
@@ -335,7 +335,7 @@ def test_cli_no_plugins_flag_skips_extra_steps(
     monkeypatch.setattr(
         cli,
         "run_release_pipeline",
-        lambda steps: calls.append([type(step).__name__ for step in steps]),
+        lambda steps, config=None: calls.append([type(step).__name__ for step in steps]),
     )
 
     exit_code = cli.main(["--mode", "build", "--project-dir", str(project_dir), "--no-plugins"])
@@ -497,6 +497,52 @@ def test_cli_set_version_mode_calls_set_release_version_and_skips_pipeline(
 
     assert exit_code == 0
     assert calls == [("1.2.3", "1.3.0")]
+
+
+def test_cli_clean_mode_recovers_latest_incomplete_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """[Unit] cli: clean mode reconstructs the latest interrupted release run."""
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    config = cli.load_config(project_dir.resolve(), {})
+    history = cli.RunHistory.create(config, [cli.GitTagStep(config)])
+    history.set_step_status(0, "completed")
+    captured: list[str] = []
+
+    monkeypatch.setattr(
+        cli,
+        "clean_release_run",
+        lambda steps, run: captured.extend([type(steps[0]).__name__, run.data["run_id"]]),
+    )
+    monkeypatch.setattr(
+        cli,
+        "sanity_check",
+        lambda config: (_ for _ in ()).throw(AssertionError("should not run")),
+    )
+
+    exit_code = cli.main(["--mode", "clean", "--project-dir", str(project_dir)])
+
+    assert exit_code == 0
+    assert captured == ["GitTagStep", history.data["run_id"]]
+
+
+def test_cli_clean_mode_reports_when_no_run_needs_recovery(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+):
+    """[Unit] cli: clean mode is a no-op when no interrupted run exists."""
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+
+    exit_code = cli.main(["--mode", "clean", "--project-dir", str(project_dir)])
+
+    assert exit_code == 0
+    assert "No incomplete release run found" in capsys.readouterr().out
 
 
 def test_dunder_main_module_exits_cleanly_on_help(monkeypatch: pytest.MonkeyPatch):

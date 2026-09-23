@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from release_saga.config import ReleaseConfig
 from release_saga.history import RunHistory
 from release_saga.pipeline import clean_release_run, run_release_pipeline
@@ -81,3 +83,17 @@ def test_latest_incomplete_ignores_successful_runs(tmp_path: Path, monkeypatch):
 
     assert loaded is not None
     assert loaded.data["run_id"] == interrupted.data["run_id"]
+
+
+def test_latest_incomplete_ignores_other_project_with_same_name_and_version(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """[Unit] run history: does not recover an unrelated project with matching metadata."""
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    other_config = make_config(tmp_path / "other-project")
+    RunHistory.create(other_config, [RecordingStep([])])
+
+    loaded = RunHistory.latest_incomplete(make_config(tmp_path / "current-project"))
+
+    assert loaded is None

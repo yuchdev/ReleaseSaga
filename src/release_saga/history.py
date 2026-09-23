@@ -56,6 +56,7 @@ class RunHistory:
                 "run_id": run_id,
                 "package_name": config.package_name_dash,
                 "version": config.version,
+                "project_dir": str(config.project_dir.resolve()),
                 "started_at": _now(),
                 "status": "in_progress",
                 "steps": [
@@ -88,6 +89,7 @@ class RunHistory:
                 isinstance(data, dict)
                 and data.get("package_name") == config.package_name_dash
                 and data.get("version") == config.version
+                and data.get("project_dir") == str(config.project_dir.resolve())
                 and data.get("status") in {"in_progress", "rollback_failed"}
                 and isinstance(data.get("steps"), list)
             ):

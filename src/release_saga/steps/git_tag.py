@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from subprocess import run
+from typing import Any
 
 from release_saga.config import ReleaseConfig
 from release_saga.package_ops import command_ok, executable_exists
@@ -26,6 +27,8 @@ class GitTagStep(ReleaseStep):
         self.config = config
         self._created_local_tag = False
         self._pushed_remote_tag = False
+        self._rollback_tag: str | None = None
+        self._rollback_remote: str | None = None
 
     def _tag(self) -> str:
         """Render the git tag name for the configured release.
@@ -78,17 +81,42 @@ class GitTagStep(ReleaseStep):
         )
         self._pushed_remote_tag = True
 
+    def recovery_data(self) -> dict[str, Any]:
+        """Capture the tag and remote needed by a later clean operation."""
+        return {"tag": self._tag(), "remote": self.config.git_remote}
+
+    def prepare_rollback(self, recovery_data: dict[str, Any]):
+        """Restore successful tag creation state from persisted history."""
+        self._rollback_tag = str(recovery_data["tag"])
+        self._rollback_remote = str(recovery_data["remote"])
+        self._created_local_tag = True
+        self._pushed_remote_tag = True
+
     def rollback(self):
         """Delete any local or remote tag created by this run.
 
         :raises CalledProcessError: If git fails while deleting a created tag.
         """
-        tag = self._tag()
-        if self._pushed_remote_tag:
+        tag = self._rollback_tag or self._tag()
+        remote = self._rollback_remote or self.config.git_remote
+        rollback_may_be_unapplied = getattr(self, "_rollback_may_be_unapplied", False)
+        if self._pushed_remote_tag and (
+            not rollback_may_be_unapplied
+            or command_ok(
+                ["git", "ls-remote", "--exit-code", "--tags", remote, tag],
+                cwd=self.config.project_dir,
+            )
+        ):
             run(
-                ["git", "push", self.config.git_remote, f":refs/tags/{tag}"],
+                ["git", "push", remote, f":refs/tags/{tag}"],
                 check=True,
                 cwd=self.config.project_dir,
             )
-        if self._created_local_tag:
+        if self._created_local_tag and (
+            not rollback_may_be_unapplied
+            or command_ok(
+                ["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"],
+                cwd=self.config.project_dir,
+            )
+        ):
             run(["git", "tag", "-d", tag], check=True, cwd=self.config.project_dir)

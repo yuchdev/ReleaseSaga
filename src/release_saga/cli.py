@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from release_saga.config import ReleaseConfig, load_config, resolve_project_dir
+from release_saga.history import RunHistory, step_id
 from release_saga.package_ops import (
     build_wheel,
     cleanup_old_wheels,
@@ -16,7 +17,7 @@ from release_saga.package_ops import (
     sanity_check,
     uninstall_wheel,
 )
-from release_saga.pipeline import run_release_pipeline
+from release_saga.pipeline import clean_release_run, run_release_pipeline
 from release_saga.plugins import PluginLoadError, load_plugin_steps
 from release_saga.steps.base import ReleaseStep
 from release_saga.steps.git_tag import GitTagStep
@@ -35,7 +36,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--mode",
         help="What to do with the package",
-        choices=["build", "install", "dev", "reinstall", "uninstall", "set-version"],
+        choices=["build", "install", "dev", "reinstall", "uninstall", "set-version", "clean"],
         default="reinstall",
         required=False,
     )
@@ -157,6 +158,55 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"Set version to {args.new_version}")
         return 0
 
+    if args.mode == "clean":
+        history = RunHistory.latest_incomplete(config)
+        if history is None:
+            print(f"No incomplete release run found for {config.package_name_dash} {config.version}")
+            return 0
+        built_in_types = {
+            f"{UploadS3Step.__module__}:{UploadS3Step.__qualname__}",
+            f"{GitTagStep.__module__}:{GitTagStep.__qualname__}",
+            f"{GitHubReleaseStep.__module__}:{GitHubReleaseStep.__qualname__}",
+            f"{PublishPyPiStep.__module__}:{PublishPyPiStep.__qualname__}",
+        }
+        records = [
+            record
+            for record in history.data["steps"]
+            if record.get("status") in {"completed", "rollback_failed", "in_progress"}
+        ]
+        needs_plugins = any(record.get("id") not in built_in_types for record in records)
+        plugin_steps: list[ReleaseStep] = []
+        if needs_plugins and not args.no_plugins:
+            try:
+                plugin_steps = load_plugin_steps(config)
+            except PluginLoadError as exc:
+                parser.error(str(exc))
+        candidates: dict[str, list[ReleaseStep]] = {}
+        for step in plugin_steps:
+            candidates.setdefault(step_id(step), []).append(step)
+        recovery_steps: list[ReleaseStep] = []
+        for record in records:
+            identifier = record.get("id")
+            recovery_data = record.get("recovery_data", {})
+            if identifier == f"{UploadS3Step.__module__}:{UploadS3Step.__qualname__}":
+                key = str(recovery_data.get("key", "release.whl"))
+                step = UploadS3Step(config, Path(key).name)
+            elif identifier == f"{GitTagStep.__module__}:{GitTagStep.__qualname__}":
+                step = GitTagStep(config)
+            elif identifier == f"{GitHubReleaseStep.__module__}:{GitHubReleaseStep.__qualname__}":
+                step = GitHubReleaseStep(config)
+            elif identifier == f"{PublishPyPiStep.__module__}:{PublishPyPiStep.__qualname__}":
+                step = PublishPyPiStep(config)
+            else:
+                matching = candidates.get(identifier, [])
+                if not matching:
+                    parser.error(f"Cannot reconstruct recorded release step '{record.get('name')}'")
+                step = matching.pop(0)
+            recovery_steps.append(step)
+        clean_release_run(recovery_steps, history)
+        print(f"Cleaned interrupted release run {history.data['run_id']}")
+        return 0
+
     print(f"Package name: {config.package_name}")
     print(f"Package name2: {config.package_name_dash}")
     print(f"Version: {config.version}")
@@ -196,6 +246,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             plugin_steps=plugin_steps,
         )
         if steps:
-            run_release_pipeline(steps)
+            run_release_pipeline(steps, config)
 
     return 0

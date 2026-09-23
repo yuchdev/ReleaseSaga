@@ -3,6 +3,17 @@
     "download_link": "https://packages-s3-useast1-any.s3.dualstack.us-east-1.amazonaws.com/{package_name_dash}/{package_name}-{version}-py3-none-any.whl"
   },
   "releases": {
+    "1.1.0": {
+      "release_notes": [
+        "Adds a plugin system so a target project can add its own release steps without reimplementing the CLI: list `\"path_or_module:ClassName\"` entries under `[tool.release-saga] extra_steps` in the target project's pyproject.toml for a project-specific step (list order is priority), or publish a pip-installable package that registers a `release_saga.steps` entry point for a step meant to be shared across projects. Both mechanisms run after the built-in S3/git/GitHub steps but before the irreversible PyPI publish step, and both are exposed publicly via `release_saga.plugins` (`load_plugin_steps`, `load_configured_steps`, `discover_entry_point_steps`, `resolve_plugin_spec`, `PluginLoadError`).",
+        "Adds `--no-plugins` to disable both plugin mechanisms for a single invocation.",
+        "Adds persisted recovery for interrupted release runs: every CLI-driven pipeline run is now recorded under `$XDG_DATA_HOME/release-saga/<package>/<version>/` (or `~/.local/share/release-saga/<package>/<version>/`) as it progresses.",
+        "Adds `--mode clean` to recover from a run that was interrupted after one or more steps completed: it finds the newest incomplete run recorded for the target project's current version and retries rollback for its completed steps, in reverse order, including reconstructing any plugin steps that were part of that run.",
+        "Plugin steps that carry rollback state across a process restart can implement `recovery_data()` and `prepare_rollback()` to persist and restore that state for `--mode clean`; stateless plugin rollback needs no additional methods.",
+        "Hardens recovery-history persistence and scopes it per target project, and fixes several rollback edge cases uncovered while exercising `--mode clean` against partially-completed runs.",
+        "Rewrites the \"Extending with custom steps\" section of the README and the custom-release-step tutorial around plugin loading as the recommended approach, keeping manual pipeline wiring documented as an older, still-supported alternative for one-off scripts."
+      ]
+    },
     "1.0.1": {
       "release_notes": [
         "Fixes a bug in the `--mode set-version` command that caused an error when the version was already set in RELEASE_NOTES.json",

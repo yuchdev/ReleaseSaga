@@ -29,6 +29,17 @@ class RecordingStep(ReleaseStep):
         self.events.append(f"prepare:{recovery_data['value']}")
 
 
+class FailingRecoveryStep(RecordingStep):
+    def execute(self):
+        super().execute()
+        self._raise_during_recovery = True
+
+    def recovery_data(self):
+        if getattr(self, "_raise_during_recovery", False):
+            raise RuntimeError("cannot capture recovery data")
+        return super().recovery_data()
+
+
 def make_config(project_dir: Path) -> ReleaseConfig:
     return ReleaseConfig(
         project_dir=project_dir,
@@ -71,6 +82,24 @@ def test_clean_release_run_rolls_back_completed_steps_in_reverse(tmp_path: Path,
     assert [step["status"] for step in history.data["steps"]] == ["rolled_back", "rolled_back"]
 
 
+def test_clean_release_run_rolls_back_in_progress_steps_in_reverse(tmp_path: Path, monkeypatch):
+    """[Unit] clean pipeline: restores and rolls back uncertain in-progress steps in reverse order."""
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    config = make_config(tmp_path)
+    events: list[str] = []
+    first = RecordingStep(events)
+    second = RecordingStep(events)
+    history = RunHistory.create(config, [first, second])
+    history.set_step_status(0, "completed")
+    history.set_step_status(1, "in_progress")
+
+    clean_release_run([first, second], history)
+
+    assert events == ["prepare:before execute", "prepare:before execute", "rollback", "rollback"]
+    assert history.data["status"] == "rolled_back"
+    assert [step["status"] for step in history.data["steps"]] == ["rolled_back", "rolled_back"]
+
+
 def test_latest_incomplete_ignores_successful_runs(tmp_path: Path, monkeypatch):
     """[Unit] run history: returns only the newest recoverable run."""
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
@@ -97,3 +126,20 @@ def test_latest_incomplete_ignores_other_project_with_same_name_and_version(
     loaded = RunHistory.latest_incomplete(make_config(tmp_path / "current-project"))
 
     assert loaded is None
+
+
+def test_pipeline_rolls_back_when_recovery_data_capture_fails(tmp_path: Path, monkeypatch):
+    """[Unit] pipeline: recovery-data capture failures still trigger rollback."""
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    config = make_config(tmp_path)
+    events: list[str] = []
+
+    with pytest.raises(SystemExit):
+        run_release_pipeline([RecordingStep(events), FailingRecoveryStep(events)], config)
+
+    records = list((tmp_path / "data" / "release-saga" / "demo-package" / "1.2.3").glob("*.json"))
+    assert len(records) == 1
+    data = json.loads(records[0].read_text(encoding="utf-8"))
+    assert events == ["execute", "execute", "rollback", "rollback"]
+    assert data["status"] == "rolled_back"
+    assert [step["status"] for step in data["steps"]] == ["rolled_back", "rolled_back"]

@@ -156,9 +156,14 @@ class GitHubReleaseStep(ReleaseStep):
 
         :raises CalledProcessError: If the GitHub CLI fails while deleting the release.
         """
-        if self._created_release:
+        tag = self._rollback_tag or self._tag()
+        rollback_may_be_unapplied = getattr(self, "_rollback_may_be_unapplied", False)
+        if self._created_release and (
+            not rollback_may_be_unapplied
+            or command_ok(["gh", "release", "view", tag], cwd=self.config.project_dir)
+        ):
             run(
-                ["gh", "release", "delete", self._rollback_tag or self._tag(), "--yes"],
+                ["gh", "release", "delete", tag, "--yes"],
                 check=True,
                 cwd=self.config.project_dir,
             )

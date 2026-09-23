@@ -77,6 +77,8 @@ def run_release_pipeline(steps: list[ReleaseStep], config: Optional[ReleaseConfi
             history.set_step_status(index, "in_progress")
         try:
             step.execute()
+            if history is not None:
+                history.set_step_status(index, "completed", step.recovery_data())
         except CalledProcessError as exc:
             _log(f"ERROR: '{step.name}' failed (command exited {exc.returncode}): {exc}")
             rolled_back = _rollback([(index, step), *reversed(completed)], history)
@@ -92,8 +94,6 @@ def run_release_pipeline(steps: list[ReleaseStep], config: Optional[ReleaseConfi
         else:
             _log(f"Completed: {step.name}")
             completed.append((index, step))
-            if history is not None:
-                history.set_step_status(index, "completed", step.recovery_data())
 
     if history is not None:
         history.set_status("completed")
@@ -105,7 +105,7 @@ def clean_release_run(steps: list[ReleaseStep], history: RunHistory):
     records = [
         (index, record)
         for index, record in enumerate(history.data["steps"])
-        if record.get("status") in {"completed", "rollback_failed"}
+        if record.get("status") in {"completed", "rollback_failed", "in_progress"}
     ]
     if len(steps) != len(records) or any(
         step_id(step) != record.get("id")
@@ -115,7 +115,7 @@ def clean_release_run(steps: list[ReleaseStep], history: RunHistory):
 
     rollback_steps: list[tuple[int, ReleaseStep]] = []
     for step, (index, record) in zip(steps, records, strict=True):
-        step.prepare_rollback(record.get("recovery_data", {}))
+        step.prepare_recovery(record.get("recovery_data", {}), str(record.get("status", "pending")))
         rollback_steps.append((index, step))
 
     rolled_back = _rollback(list(reversed(rollback_steps)), history)

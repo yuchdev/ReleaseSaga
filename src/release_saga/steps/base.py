@@ -27,6 +27,11 @@ class ReleaseStep(ABC):
         """Return JSON-serializable data needed to reconstruct rollback state."""
         return {}
 
+    def prepare_recovery(self, recovery_data: dict[str, Any], status: str):
+        """Restore rollback state for an interrupted or partially recorded step."""
+        self._rollback_may_be_unapplied = status == "in_progress"
+        self.prepare_rollback(recovery_data)
+
     def prepare_rollback(self, recovery_data: dict[str, Any]):
         """Restore state needed to roll back work completed in an earlier process."""
         del recovery_data

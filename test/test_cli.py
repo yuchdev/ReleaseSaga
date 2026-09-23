@@ -529,6 +529,36 @@ def test_cli_clean_mode_recovers_latest_incomplete_run(
     assert captured == ["GitTagStep", history.data["run_id"]]
 
 
+def test_cli_clean_mode_recovers_in_progress_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """[Unit] cli: clean mode reconstructs uncertain in-progress steps."""
+    project_dir = tmp_path / "target-project"
+    write_project(project_dir)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    config = cli.load_config(project_dir.resolve(), {})
+    history = cli.RunHistory.create(config, [cli.GitTagStep(config)])
+    history.set_step_status(0, "in_progress")
+    captured: list[str] = []
+
+    monkeypatch.setattr(
+        cli,
+        "clean_release_run",
+        lambda steps, run: captured.extend([type(steps[0]).__name__, run.data["run_id"]]),
+    )
+    monkeypatch.setattr(
+        cli,
+        "sanity_check",
+        lambda config: (_ for _ in ()).throw(AssertionError("should not run")),
+    )
+
+    exit_code = cli.main(["--mode", "clean", "--project-dir", str(project_dir)])
+
+    assert exit_code == 0
+    assert captured == ["GitTagStep", history.data["run_id"]]
+
+
 def test_cli_clean_mode_reports_when_no_run_needs_recovery(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

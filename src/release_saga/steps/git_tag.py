@@ -99,11 +99,24 @@ class GitTagStep(ReleaseStep):
         """
         tag = self._rollback_tag or self._tag()
         remote = self._rollback_remote or self.config.git_remote
-        if self._pushed_remote_tag:
+        rollback_may_be_unapplied = getattr(self, "_rollback_may_be_unapplied", False)
+        if self._pushed_remote_tag and (
+            not rollback_may_be_unapplied
+            or command_ok(
+                ["git", "ls-remote", "--exit-code", "--tags", remote, tag],
+                cwd=self.config.project_dir,
+            )
+        ):
             run(
                 ["git", "push", remote, f":refs/tags/{tag}"],
                 check=True,
                 cwd=self.config.project_dir,
             )
-        if self._created_local_tag:
+        if self._created_local_tag and (
+            not rollback_may_be_unapplied
+            or command_ok(
+                ["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"],
+                cwd=self.config.project_dir,
+            )
+        ):
             run(["git", "tag", "-d", tag], check=True, cwd=self.config.project_dir)

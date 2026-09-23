@@ -378,6 +378,23 @@ def test_git_tag_step_rollback_only_cleans_up_created_effects(tmp_path: Path, mo
     ]
 
 
+def test_git_tag_step_uncertain_recovery_skips_missing_tag_artifacts(tmp_path: Path, monkeypatch):
+    """[Unit] git_tag_step: uncertain recovery skips missing local and remote tags."""
+    step = GitTagStep(make_config(tmp_path))
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr("release_saga.steps.git_tag.command_ok", lambda cmd, cwd=None: False)
+    monkeypatch.setattr(
+        "release_saga.steps.git_tag.run",
+        lambda cmd, **kwargs: commands.append(cmd),
+    )
+
+    step.prepare_recovery({"tag": "v1.2.3", "remote": "origin"}, "in_progress")
+    step.rollback()
+
+    assert commands == []
+
+
 def test_github_release_step_reports_missing_gh_cli(tmp_path: Path, monkeypatch):
     """[Unit] github_release_step: reports missing gh CLI.
 
@@ -653,6 +670,23 @@ def test_github_release_step_rollback_only_deletes_created_release(
     step.rollback()
 
     assert commands == [["gh", "release", "delete", "v1.2.3", "--yes"]]
+
+
+def test_github_release_step_uncertain_recovery_skips_missing_release(tmp_path: Path, monkeypatch):
+    """[Unit] github_release_step: uncertain recovery skips a missing release."""
+    step = GitHubReleaseStep(make_config(tmp_path))
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr("release_saga.steps.github_release.command_ok", lambda cmd, cwd=None: False)
+    monkeypatch.setattr(
+        "release_saga.steps.github_release.run",
+        lambda cmd, **kwargs: commands.append(cmd),
+    )
+
+    step.prepare_recovery({"tag": "v1.2.3"}, "in_progress")
+    step.rollback()
+
+    assert commands == []
 
 
 def test_upload_s3_step_uses_normalized_object_key(tmp_path: Path, monkeypatch):

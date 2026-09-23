@@ -172,7 +172,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         records = [
             record
             for record in history.data["steps"]
-            if record.get("status") in {"completed", "rollback_failed"}
+            if record.get("status") in {"completed", "rollback_failed", "in_progress"}
         ]
         needs_plugins = any(record.get("id") not in built_in_types for record in records)
         plugin_steps: list[ReleaseStep] = []

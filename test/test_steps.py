@@ -12,6 +12,12 @@ from release_saga.steps.pypi_publish import PIP, PublishPyPiStep
 from release_saga.steps.s3 import UploadS3Step
 
 
+@pytest.fixture(autouse=True)
+def _no_pip_bootstrap(monkeypatch: pytest.MonkeyPatch):
+    """Keep the PyPI step from probing or bootstrapping the real interpreter's pip."""
+    monkeypatch.setattr("release_saga.steps.pypi_publish.ensure_pip", lambda: None)
+
+
 def make_config(project_dir: Path, **overrides: Optional[str]) -> ReleaseConfig:
     values = {
         "project_dir": project_dir,

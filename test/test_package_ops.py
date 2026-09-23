@@ -11,6 +11,7 @@ from release_saga.package_ops import (
     build_wheel,
     cleanup_old_wheels,
     command_ok,
+    ensure_pip,
     executable_exists,
     install_wheel,
     install_wheel_devmode,
@@ -27,6 +28,54 @@ def make_config(project_dir: Path) -> ReleaseConfig:
         package_name_dash="demo-package",
         version="1.2.3",
     )
+
+
+@pytest.fixture(autouse=True)
+def _no_pip_bootstrap(monkeypatch: pytest.MonkeyPatch):
+    """Keep pip-using helpers from probing or bootstrapping the real interpreter."""
+    monkeypatch.setattr("release_saga.package_ops.ensure_pip", lambda: None)
+
+
+def test_ensure_pip_skips_bootstrap_when_pip_is_available(monkeypatch: pytest.MonkeyPatch):
+    """[Local] ensure_pip: skips ensurepip when pip is already importable.
+
+    Scenario:
+        `python -m pip --version` succeeds, so no bootstrap command may run.
+
+    Boundaries:
+        Covers patched subprocess calls without touching the real interpreter.
+
+    On failure, first check:
+        The `command_ok` probe in `ensure_pip`.
+    """
+    commands: list[list[str]] = []
+    monkeypatch.setattr("release_saga.package_ops.command_ok", lambda cmd, cwd=None: True)
+    monkeypatch.setattr("release_saga.package_ops.run", lambda cmd, **kwargs: commands.append(cmd))
+
+    ensure_pip()
+
+    assert commands == []
+
+
+def test_ensure_pip_bootstraps_pip_when_missing(monkeypatch: pytest.MonkeyPatch):
+    """[Local] ensure_pip: runs ensurepip when pip is missing (uv-created venv).
+
+    Scenario:
+        `python -m pip --version` fails, as in a `uv venv`, so `ensurepip` must install pip.
+
+    Boundaries:
+        Covers patched subprocess calls without touching the real interpreter.
+
+    On failure, first check:
+        The `ensurepip` command built in `ensure_pip`.
+    """
+    commands: list[list[str]] = []
+    monkeypatch.setattr("release_saga.package_ops.command_ok", lambda cmd, cwd=None: False)
+    monkeypatch.setattr("release_saga.package_ops.run", lambda cmd, **kwargs: commands.append(cmd))
+
+    ensure_pip()
+
+    assert commands == [[PYTHON, "-m", "ensurepip", "--upgrade"]]
 
 
 def test_resolve_wheel_path_matches_prefix_not_exact_suffix(tmp_path: Path):
@@ -302,8 +351,8 @@ def test_build_wheel_upgrades_pip_and_build_then_builds(
     build_wheel(make_config(tmp_path))
 
     assert commands == [
-        [PYTHON, "-m", "pip", "install", "--upgrade", "pip"],
-        [PYTHON, "-m", "pip", "install", "--upgrade", "build"],
+        [*PIP, "install", "--upgrade", "pip"],
+        [*PIP, "install", "--upgrade", "build"],
         [PYTHON, "-m", "build"],
     ]
 

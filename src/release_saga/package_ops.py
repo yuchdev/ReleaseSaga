@@ -40,6 +40,19 @@ def command_ok(cmd: Sequence[str], cwd: Path | None = None) -> bool:
         return False
 
 
+def ensure_pip():
+    """Make sure ``pip`` is importable by the interpreter running ReleaseSaga.
+
+    Virtual environments created by ``uv venv``/``uv sync`` ship without ``pip``, so every
+    ``python -m pip`` call would fail with ``No module named pip``. In that case ``pip`` is
+    bootstrapped from the interpreter's bundled wheel via ``ensurepip``.
+
+    :raises CalledProcessError: If ``pip`` is missing and ``ensurepip`` fails to install it.
+    """
+    if not command_ok([*PIP, "--version"]):
+        run([PYTHON, "-m", "ensurepip", "--upgrade"], check=True)
+
+
 def sanity_check(config: ReleaseConfig):
     """Validate the expected source layout for the target project.
 
@@ -80,6 +93,7 @@ def uninstall_wheel(config: ReleaseConfig):
     :param config: Resolved release configuration for the target package.
     :raises CalledProcessError: If the uninstall command fails.
     """
+    ensure_pip()
     run([*PIP, "uninstall", "-y", config.package_name_dash], check=True)
 
 
@@ -89,8 +103,9 @@ def build_wheel(config: ReleaseConfig):
     :param config: Resolved release configuration for the target package.
     :raises CalledProcessError: If dependency installation or wheel building fails.
     """
-    run([PYTHON, "-m", "pip", "install", "--upgrade", "pip"], check=True, cwd=config.project_dir)
-    run([PYTHON, "-m", "pip", "install", "--upgrade", "build"], check=True, cwd=config.project_dir)
+    ensure_pip()
+    run([*PIP, "install", "--upgrade", "pip"], check=True, cwd=config.project_dir)
+    run([*PIP, "install", "--upgrade", "build"], check=True, cwd=config.project_dir)
     run([PYTHON, "-m", "build"], check=True, cwd=config.project_dir)
 
 
@@ -101,6 +116,7 @@ def install_wheel(config: ReleaseConfig):
     :raises FileNotFoundError: If no matching wheel is available to install.
     :raises CalledProcessError: If the installation command fails.
     """
+    ensure_pip()
     run([*PIP, "install", str(resolve_wheel_path(config))], check=True)
 
 
@@ -110,6 +126,7 @@ def install_wheel_devmode(config: ReleaseConfig):
     :param config: Resolved release configuration for the target package.
     :raises CalledProcessError: If the editable install command fails.
     """
+    ensure_pip()
     run([*PIP, "install", "-e", "."], check=True, cwd=config.project_dir)
 
 

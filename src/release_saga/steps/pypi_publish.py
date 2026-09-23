@@ -7,7 +7,7 @@ from subprocess import run
 from typing import Optional
 
 from release_saga.config import ReleaseConfig
-from release_saga.package_ops import PIP, executable_exists
+from release_saga.package_ops import PIP, ensure_pip, executable_exists
 from release_saga.steps.base import ReleaseStep
 
 
@@ -51,6 +51,7 @@ class PublishPyPiStep(ReleaseStep):
             raise FileNotFoundError(
                 f"No distributions found for '{self.config.publish_glob}' in {self.config.project_dir}"
             )
+        ensure_pip()
         run(
             [*PIP, "install", "--upgrade", "build", "twine"],
             check=True,

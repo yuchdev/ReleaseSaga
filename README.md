@@ -60,6 +60,49 @@ release_notes_path = "RELEASE_NOTES.json"
 publish_glob = "dist/*"
 ```
 
+## How it compares
+
+Several mature release tools exist. ReleaseSaga is not trying to replace all of them. It focuses
+on one problem they mostly leave to you: **what happens when a multi-target release fails halfway**.
+
+| | ReleaseSaga | [semantic-release](https://github.com/semantic-release/semantic-release) | [python-semantic-release](https://github.com/python-semantic-release/python-semantic-release) | [zest.releaser](https://github.com/zestsoftware/zest.releaser) |
+|---|---|---|---|---|
+| Ecosystem / runtime | Python CLI, any Python project | Node.js, npm-first (other ecosystems via plugins) | Python | Python |
+| Main focus | Transactional publish across several targets | Fully automated CI releases from commit messages | Commit-driven version bump, changelog, tag, and publish | Interactive, human-driven release checklist |
+| Failure mid-release | Completed steps are **rolled back in reverse order** (Saga) | Stops. Tags, published packages, and releases created so far stay in place | Stops. Earlier side effects stay in place | Stops. You clean up by hand |
+| Re-run after a partial failure | Every step's `check()` detects existing tags, releases, and S3 objects **before** anything runs; `--mode clean` resumes an interrupted rollback | Depends on each plugin | Manual | Manual |
+| Setup | `pip install`, optional `[tool.release-saga]` table; every key has a default | `package.json`/`.releaserc` plus a plugin list, Node toolchain on the build machine | `[tool.semantic_release]` config plus a Conventional Commits discipline | `pip install`; answer prompts |
+| How it talks to services | Runs the standard CLIs you already have and authenticate: `git`, `gh`, `aws`, `twine` | Built-in plugin code calling service APIs | Built-in code calling service APIs | `twine` for uploads, `git`/`hg` for VCS |
+| Version / changelog automation | No. You set the version explicitly (`--mode set-version`) | Yes, from Conventional Commits | Yes, from Conventional Commits | Bumps version, edits changelog |
+
+### Why ReleaseSaga
+
+- **Designed for transactional releases.** A real release often touches four systems: an artifact
+  store (S3), a git remote, a GitHub release, and PyPI. Other tools run those steps as a script
+  that halts on the first error, so a failed GitHub release can leave a pushed tag and an
+  uploaded wheel behind. ReleaseSaga models each target as a `ReleaseStep` with `check()`,
+  `execute()`, and `rollback()`. If a step fails, the steps already done are undone, so the
+  release either happens completely or leaves no trace. The one exception is a PyPI upload,
+  which can't be undone, so it always runs last.
+- **Simple to set up and use.** No Node toolchain, no plugin list to assemble, and no commit
+  message convention to adopt. Install it, run `release-saga --create-release --publish-pypi`
+  from the project root, and opt into targets with flags. Configuration is a small, optional
+  table in the `pyproject.toml` you already have, and every key has a sensible default.
+- **Built on the external tools you already trust.** ReleaseSaga doesn't reimplement service
+  clients. It calls `twine`, `aws`, `gh`, and `git` as subprocesses, so it uses the credentials,
+  profiles, and `~/.pypirc` already on your machine or CI runner. There are no extra tokens or
+  auth formats to learn. When a step fails, the error is the familiar output of the underlying
+  tool, and you can rerun the same command by hand to debug it.
+- **Extensible without forking.** A custom target, such as a Docker push, a docs deploy, or a
+  Slack notice, is one small class listed in `extra_steps` or shipped as an entry-point plugin,
+  and it gets the same rollback guarantees as the built-in steps.
+
+**Pick something else if** you want fully automatic version numbers and changelogs generated from
+commit history (semantic-release, python-semantic-release) or a guided interactive checklist
+(zest.releaser). These tools can work together: for example, let a commit-driven tool pick the
+version, then pass it to `release-saga --mode set-version` and use ReleaseSaga's pipeline to
+publish.
+
 ## Architecture
 
 `release-saga` is a tool you run *from* a target project's directory (or point at one with

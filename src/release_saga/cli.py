@@ -9,19 +9,13 @@ from typing import Optional
 
 from release_saga.config import ReleaseConfig, load_config, resolve_project_dir
 from release_saga.history import RunHistory, step_id
-from release_saga.package_ops import (
-    build_wheel,
-    cleanup_old_wheels,
-    install_wheel,
-    install_wheel_devmode,
-    sanity_check,
-    uninstall_wheel,
-)
+from release_saga.package_ops import build_wheel, cleanup_old_wheels, sanity_check
 from release_saga.pipeline import clean_release_run, run_release_pipeline
 from release_saga.plugins import PluginLoadError, load_plugin_steps
 from release_saga.steps.base import ReleaseStep
 from release_saga.steps.git_tag import GitTagStep
 from release_saga.steps.github_release import GitHubReleaseStep
+from release_saga.steps.local_install import LocalInstallStep
 from release_saga.steps.pypi_publish import PublishPyPiStep
 from release_saga.steps.s3 import UploadS3Step
 from release_saga.version_ops import set_release_version
@@ -32,24 +26,45 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     :returns: Configured parser containing all supported command-line options.
     """
-    parser = argparse.ArgumentParser(description="Command-line params")
-    parser.add_argument(
-        "--mode",
-        help="What to do with the package",
-        choices=["build", "install", "dev", "reinstall", "uninstall", "set-version", "clean"],
-        default="reinstall",
-        required=False,
+    parser = argparse.ArgumentParser(
+        description=(
+            "Build the target project's wheel and run the selected release steps, "
+            "rolling back completed steps if any step fails"
+        )
     )
-    parser.add_argument(
+    one_shot = parser.add_mutually_exclusive_group()
+    one_shot.add_argument(
         "--version",
         help="Print the target project's current version (from its pyproject.toml) and exit",
         action="store_true",
         required=False,
     )
-    parser.add_argument(
-        "--new-version",
-        help="Version to write when --mode is 'set-version'",
+    one_shot.add_argument(
+        "--set-version",
+        metavar="VERSION",
+        help="Write VERSION to the target project's pyproject.toml, RELEASE_NOTES.json and uv.lock, then exit",
         default=None,
+        required=False,
+    )
+    one_shot.add_argument(
+        "--clean",
+        help="Roll back the latest interrupted release run for the current version, then exit",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "--local-install",
+        help="Install or upgrade the built wheel locally; uninstalled again if the release fails",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "--local-dev-mode",
+        help=(
+            "Install locally in editable (development) mode instead; implies --local-install, "
+            "and the editable install is kept regardless of the release result"
+        ),
+        action="store_true",
         required=False,
     )
     parser.add_argument(
@@ -95,6 +110,8 @@ def build_release_steps(
     create_release: bool,
     publish_pypi: bool,
     plugin_steps: Optional[list[ReleaseStep]] = None,
+    local_install: bool = False,
+    local_dev_mode: bool = False,
 ) -> list[ReleaseStep]:
     """Assemble the built-in release steps selected by CLI flags.
 
@@ -104,9 +121,15 @@ def build_release_steps(
     :param publish_pypi: Whether to include the PyPI publishing step.
     :param plugin_steps: Plugin-provided steps (see `release_saga.plugins`) to run after the
         built-in S3/git/GitHub steps but before the irreversible PyPI publish step.
+    :param local_install: Whether to include the local installation step. It runs first: it is
+        cheap, reversible, and smoke-tests the wheel before anything is published externally.
+    :param local_dev_mode: Whether the local installation step installs in editable mode.
+        Implies ``local_install``.
     :returns: Release step instances in the order they must run.
     """
     steps: list[ReleaseStep] = []
+    if local_install or local_dev_mode:
+        steps.append(LocalInstallStep(config, dev_mode=local_dev_mode))
     if upload_s3:
         steps.append(UploadS3Step(config))
     if create_release:
@@ -135,9 +158,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(config.version)
         return 0
 
-    if args.mode == "set-version" and not args.new_version:
-        parser.error("--new-version is required when --mode is 'set-version'")
-
     cli_overrides = {
         key: value
         for key, value in {
@@ -153,17 +173,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     }
     config = load_config(project_dir, cli_overrides)
 
-    if args.mode == "set-version":
-        set_release_version(config, args.new_version)
-        print(f"Set version to {args.new_version}")
+    if args.set_version:
+        set_release_version(config, args.set_version)
+        print(f"Set version to {args.set_version}")
         return 0
 
-    if args.mode == "clean":
+    if args.clean:
         history = RunHistory.latest_incomplete(config)
         if history is None:
             print(f"No incomplete release run found for {config.package_name_dash} {config.version}")
             return 0
         built_in_types = {
+            f"{LocalInstallStep.__module__}:{LocalInstallStep.__qualname__}",
             f"{UploadS3Step.__module__}:{UploadS3Step.__qualname__}",
             f"{GitTagStep.__module__}:{GitTagStep.__qualname__}",
             f"{GitHubReleaseStep.__module__}:{GitHubReleaseStep.__qualname__}",
@@ -188,9 +209,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         for record in records:
             identifier = record.get("id")
             recovery_data = record.get("recovery_data", {})
-            if identifier == f"{UploadS3Step.__module__}:{UploadS3Step.__qualname__}":
+            if identifier == f"{LocalInstallStep.__module__}:{LocalInstallStep.__qualname__}":
+                step = LocalInstallStep(config, bool(recovery_data.get("dev_mode", False)))
+            elif identifier == f"{UploadS3Step.__module__}:{UploadS3Step.__qualname__}":
                 key = str(recovery_data.get("key", "release.whl"))
-                step = UploadS3Step(config, Path(key).name)
+                step = UploadS3Step(config, Path(Path(key).name))
             elif identifier == f"{GitTagStep.__module__}:{GitTagStep.__qualname__}":
                 step = GitTagStep(config)
             elif identifier == f"{GitHubReleaseStep.__module__}:{GitHubReleaseStep.__qualname__}":
@@ -210,42 +233,33 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f"Package name: {config.package_name}")
     print(f"Package name2: {config.package_name_dash}")
     print(f"Version: {config.version}")
+    if args.local_dev_mode:
+        print(
+            f"Development mode: {config.package_name_dash} {config.version} - development in "
+            "progress; local install will be editable and kept regardless of the release result"
+        )
     sanity_check(config)
 
-    if args.mode == "build":
-        build_wheel(config)
-    elif args.mode == "install":
-        cleanup_old_wheels(config)
-        build_wheel(config)
-        install_wheel(config)
-    elif args.mode == "dev":
-        cleanup_old_wheels(config)
-        build_wheel(config)
-        install_wheel_devmode(config)
-    elif args.mode == "reinstall":
-        cleanup_old_wheels(config)
-        uninstall_wheel(config)
-        build_wheel(config)
-        install_wheel(config)
-    elif args.mode == "uninstall":
-        uninstall_wheel(config)
+    cleanup_old_wheels(config)
+    build_wheel(config)
 
-    if args.mode != "uninstall":
-        plugin_steps: list[ReleaseStep] = []
-        if not args.no_plugins:
-            try:
-                plugin_steps = load_plugin_steps(config)
-            except PluginLoadError as exc:
-                parser.error(str(exc))
+    plugin_steps: list[ReleaseStep] = []
+    if not args.no_plugins:
+        try:
+            plugin_steps = load_plugin_steps(config)
+        except PluginLoadError as exc:
+            parser.error(str(exc))
 
-        steps = build_release_steps(
-            config,
-            upload_s3=args.upload_s3,
-            create_release=args.create_release,
-            publish_pypi=args.publish_pypi,
-            plugin_steps=plugin_steps,
-        )
-        if steps:
-            run_release_pipeline(steps, config)
+    steps = build_release_steps(
+        config,
+        upload_s3=args.upload_s3,
+        create_release=args.create_release,
+        publish_pypi=args.publish_pypi,
+        plugin_steps=plugin_steps,
+        local_install=args.local_install,
+        local_dev_mode=args.local_dev_mode,
+    )
+    if steps:
+        run_release_pipeline(steps, config)
 
     return 0

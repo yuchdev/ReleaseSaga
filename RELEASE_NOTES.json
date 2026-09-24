@@ -3,6 +3,14 @@
     "download_link": "https://packages-s3-useast1-any.s3.dualstack.us-east-1.amazonaws.com/{package_name_dash}/{package_name}-{version}-py3-none-any.whl"
   },
   "releases": {
+    "1.2.0": {
+      "release_notes": [
+        "BREAKING: removes `--mode`. The local wheel build now always runs first (plain `release-saga` just builds the wheel), so releases no longer need `--mode build`. `--mode set-version --new-version X.Y.Z` becomes `--set-version X.Y.Z`, and `--mode clean` becomes `--clean`; `--version`, `--set-version` and `--clean` are mutually exclusive one-shot commands. `--mode install|dev|reinstall|uninstall` have no one-shot replacement: use `--local-install`/`--local-dev-mode`, or run `pip uninstall` directly.",
+        "Adds a `--local-install` release step (`LocalInstallStep`, exported from `release_saga.steps`). It runs first in the pipeline and installs or upgrades the freshly built wheel locally (a rebuilt wheel with the same version still replaces the installed one). If the release fails later, the step uninstalls it again.",
+        "Adds `--local-dev-mode`: it announces that development is in progress, implies `--local-install`, and installs the project in editable mode (`pip install -e .`). The editable install is kept whatever the release result. `build_release_steps()` gains matching `local_install`/`local_dev_mode` keyword arguments, which default to off.",
+        "Fixes `--clean` passing a string instead of a `Path` as the wheel path when it rebuilds an interrupted S3 upload step."
+      ]
+    },
     "1.1.0": {
       "release_notes": [
         "Adds a plugin system so a target project can add its own release steps without reimplementing the CLI: list `\"path_or_module:ClassName\"` entries under `[tool.release-saga] extra_steps` in the target project's pyproject.toml for a project-specific step (list order is priority), or publish a pip-installable package that registers a `release_saga.steps` entry point for a step meant to be shared across projects. Both mechanisms run after the built-in S3/git/GitHub steps but before the irreversible PyPI publish step, and both are exposed publicly via `release_saga.plugins` (`load_plugin_steps`, `load_configured_steps`, `discover_entry_point_steps`, `resolve_plugin_spec`, `PluginLoadError`).",

@@ -8,6 +8,7 @@ from release_saga.config import ReleaseConfig
 from release_saga.steps.base import ReleaseStep
 from release_saga.steps.git_tag import GitTagStep
 from release_saga.steps.github_release import GitHubReleaseStep
+from release_saga.steps.local_install import LocalInstallStep
 from release_saga.steps.pypi_publish import PIP, PublishPyPiStep
 from release_saga.steps.s3 import UploadS3Step
 
@@ -912,3 +913,190 @@ def test_publish_pypi_step_expands_distribution_glob(tmp_path: Path, monkeypatch
         ["twine", "check", str(wheel), str(tarball)],
         ["twine", "upload", str(wheel), str(tarball)],
     ]
+
+
+def _write_wheel(project_dir: Path):
+    dist_dir = project_dir / "dist"
+    dist_dir.mkdir(exist_ok=True)
+    (dist_dir / "demo_package-1.2.3-py3-none-any.whl").write_text("wheel", encoding="utf-8")
+
+
+def test_local_install_step_reports_missing_wheel(tmp_path: Path):
+    """[Unit] local_install_step: reports missing wheel.
+
+    Scenario:
+        Focus on the `reports missing wheel` case for `local_install_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `local_install_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    reason = LocalInstallStep(make_config(tmp_path)).check()
+
+    assert reason is not None
+    assert "demo_package-1.2.3-" in reason
+
+
+def test_local_install_step_dev_mode_check_skips_wheel_lookup(tmp_path: Path):
+    """[Unit] local_install_step: dev mode check skips wheel lookup.
+
+    Scenario:
+        Focus on the `dev mode check skips wheel lookup` case for `local_install_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `local_install_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    step = LocalInstallStep(make_config(tmp_path), dev_mode=True)
+
+    assert step.check() is None
+    assert step.name == "install package locally (development mode)"
+
+
+def test_local_install_step_installs_then_uninstalls_on_rollback(tmp_path: Path, monkeypatch):
+    """[Unit] local_install_step: installs then uninstalls on rollback.
+
+    Scenario:
+        Focus on the `installs then uninstalls on rollback` case for `local_install_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `local_install_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    _write_wheel(tmp_path)
+    calls: list[str] = []
+    monkeypatch.setattr("release_saga.steps.local_install.install_wheel", lambda config: calls.append("install"))
+    monkeypatch.setattr("release_saga.steps.local_install.uninstall_wheel", lambda config: calls.append("uninstall"))
+    step = LocalInstallStep(make_config(tmp_path))
+
+    assert step.check() is None
+    step.execute()
+    step.rollback()
+
+    assert calls == ["install", "uninstall"]
+
+
+def test_local_install_step_rollback_skips_uninstall_when_install_failed(tmp_path: Path, monkeypatch):
+    """[Unit] local_install_step: rollback skips uninstall when install failed.
+
+    Scenario:
+        Focus on the `rollback skips uninstall when install failed` case for `local_install_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `local_install_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    calls: list[str] = []
+
+    def failing_install(config):
+        raise RuntimeError("pip failed")
+
+    monkeypatch.setattr("release_saga.steps.local_install.install_wheel", failing_install)
+    monkeypatch.setattr("release_saga.steps.local_install.uninstall_wheel", lambda config: calls.append("uninstall"))
+    step = LocalInstallStep(make_config(tmp_path))
+
+    with pytest.raises(RuntimeError):
+        step.execute()
+    step.rollback()
+
+    assert calls == []
+
+
+def test_local_install_step_dev_mode_keeps_editable_install_on_rollback(
+    tmp_path: Path,
+    monkeypatch,
+    capsys: pytest.CaptureFixture[str],
+):
+    """[Unit] local_install_step: dev mode keeps editable install on rollback.
+
+    Scenario:
+        Focus on the `dev mode keeps editable install on rollback` case for `local_install_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `local_install_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    calls: list[str] = []
+    monkeypatch.setattr("release_saga.steps.local_install.install_wheel_devmode", lambda config: calls.append("editable"))
+    monkeypatch.setattr("release_saga.steps.local_install.uninstall_wheel", lambda config: calls.append("uninstall"))
+    step = LocalInstallStep(make_config(tmp_path), dev_mode=True)
+
+    step.execute()
+    step.rollback()
+
+    assert calls == ["editable"]
+    stderr = capsys.readouterr().err
+    assert "Development in progress" in stderr
+    assert "keeping editable install" in stderr
+
+
+@pytest.mark.parametrize(
+    ("status", "installed", "expected"),
+    [
+        ("completed", False, ["uninstall"]),
+        ("in_progress", True, ["uninstall"]),
+        ("in_progress", False, []),
+    ],
+)
+def test_local_install_step_recovery_uninstalls_recorded_install(
+    tmp_path: Path,
+    monkeypatch,
+    status: str,
+    installed: bool,
+    expected: list[str],
+):
+    """[Unit] local_install_step: recovery uninstalls recorded install.
+
+    Scenario:
+        Focus on the `recovery uninstalls recorded install` case for `local_install_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `local_install_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    calls: list[str] = []
+    monkeypatch.setattr("release_saga.steps.local_install.command_ok", lambda cmd, cwd=None: installed)
+    monkeypatch.setattr("release_saga.steps.local_install.uninstall_wheel", lambda config: calls.append("uninstall"))
+    original = LocalInstallStep(make_config(tmp_path))
+    step = LocalInstallStep(make_config(tmp_path))
+
+    step.prepare_recovery(original.recovery_data(), status)
+    step.rollback()
+
+    assert original.recovery_data() == {"dev_mode": False}
+    assert calls == expected
+
+
+def test_local_install_step_recovery_restores_dev_mode(tmp_path: Path, monkeypatch):
+    """[Unit] local_install_step: recovery restores dev mode.
+
+    Scenario:
+        Focus on the `recovery restores dev mode` case for `local_install_step` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `local_install_step` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    calls: list[str] = []
+    monkeypatch.setattr("release_saga.steps.local_install.uninstall_wheel", lambda config: calls.append("uninstall"))
+    step = LocalInstallStep(make_config(tmp_path))
+
+    step.prepare_recovery({"dev_mode": True}, "completed")
+    step.rollback()
+
+    assert step.dev_mode is True
+    assert calls == []

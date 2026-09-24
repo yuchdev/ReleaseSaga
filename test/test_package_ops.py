@@ -358,10 +358,10 @@ def test_build_wheel_upgrades_pip_and_build_then_builds(
 
 
 def test_install_wheel_installs_resolved_wheel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """[Local] install_wheel: installs resolved wheel.
+    """[Local] install_wheel: force-reinstalls resolved wheel then installs dependencies.
 
     Scenario:
-        Focus on the `installs resolved wheel` case for `install_wheel` and assert the expected outcome.
+        Focus on the `force-reinstalls resolved wheel then installs dependencies` case for `install_wheel` and assert the expected outcome.
 
     Boundaries:
         Covers temporary local files, directories, or subprocess arguments without performing a real release.
@@ -381,7 +381,10 @@ def test_install_wheel_installs_resolved_wheel(tmp_path: Path, monkeypatch: pyte
 
     install_wheel(make_config(tmp_path))
 
-    assert commands == [[*PIP, "install", str(wheel)]]
+    assert commands == [
+        [*PIP, "install", "--upgrade", "--force-reinstall", "--no-deps", str(wheel)],
+        [*PIP, "install", str(wheel)],
+    ]
 
 
 def test_install_wheel_devmode_runs_editable_install(

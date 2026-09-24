@@ -107,7 +107,7 @@ class ChangelogStep(ReleaseStep):
 extra_steps = ["release_steps.py:ChangelogStep"]
 ```
 
-Now `release-saga --mode build --create-release` runs `GitTagStep`, `GitHubReleaseStep`, then
+Now `release-saga --create-release` runs `GitTagStep`, `GitHubReleaseStep`, then
 `ChangelogStep`, with full Saga rollback across all three — no code changes to `release-saga`
 itself, and no wrapper script to maintain.
 

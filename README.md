@@ -18,10 +18,21 @@ pip install release-saga
 From the root of the project you want to release:
 
 ```bash
-release-saga --mode build
+release-saga                                  # build the wheel only
+release-saga --local-install                  # build, then install/upgrade it locally
+release-saga --local-install --create-release # ...and tag + create a GitHub release
 ```
 
-Use `--project-dir` to point at a different target project directory when needed.
+Every run cleans old wheels and builds a fresh one first; each flag then opts into one release
+step. Use `--project-dir` to point at a different target project directory when needed.
+
+One-shot commands that exit without building:
+
+```bash
+release-saga --version              # print the target project's current version
+release-saga --set-version 1.4.0    # write a new version (pyproject.toml, RELEASE_NOTES.json, uv.lock)
+release-saga --clean                # roll back an interrupted release run
+```
 
 ## Configuration
 
@@ -70,10 +81,10 @@ on one problem they mostly leave to you: **what happens when a multi-target rele
 | Ecosystem / runtime | Python CLI, any Python project | Node.js, npm-first (other ecosystems via plugins) | Python | Python |
 | Main focus | Transactional publish across several targets | Fully automated CI releases from commit messages | Commit-driven version bump, changelog, tag, and publish | Interactive, human-driven release checklist |
 | Failure mid-release | Completed steps are **rolled back in reverse order** (Saga) | Stops. Tags, published packages, and releases created so far stay in place | Stops. Earlier side effects stay in place | Stops. You clean up by hand |
-| Re-run after a partial failure | Every step's `check()` detects existing tags, releases, and S3 objects **before** anything runs; `--mode clean` resumes an interrupted rollback | Depends on each plugin | Manual | Manual |
+| Re-run after a partial failure | Every step's `check()` detects existing tags, releases, and S3 objects **before** anything runs; `--clean` resumes an interrupted rollback | Depends on each plugin | Manual | Manual |
 | Setup | `pip install`, optional `[tool.release-saga]` table; every key has a default | `package.json`/`.releaserc` plus a plugin list, Node toolchain on the build machine | `[tool.semantic_release]` config plus a Conventional Commits discipline | `pip install`; answer prompts |
 | How it talks to services | Runs the standard CLIs you already have and authenticate: `git`, `gh`, `aws`, `twine` | Built-in plugin code calling service APIs | Built-in code calling service APIs | `twine` for uploads, `git`/`hg` for VCS |
-| Version / changelog automation | No. You set the version explicitly (`--mode set-version`) | Yes, from Conventional Commits | Yes, from Conventional Commits | Bumps version, edits changelog |
+| Version / changelog automation | No. You set the version explicitly (`--set-version`) | Yes, from Conventional Commits | Yes, from Conventional Commits | Bumps version, edits changelog |
 
 ### Why ReleaseSaga
 
@@ -100,18 +111,20 @@ on one problem they mostly leave to you: **what happens when a multi-target rele
 **Pick something else if** you want fully automatic version numbers and changelogs generated from
 commit history (semantic-release, python-semantic-release) or a guided interactive checklist
 (zest.releaser). These tools can work together: for example, let a commit-driven tool pick the
-version, then pass it to `release-saga --mode set-version` and use ReleaseSaga's pipeline to
+version, then pass it to `release-saga --set-version` and use ReleaseSaga's pipeline to
 publish.
 
 ## Architecture
 
 `release-saga` is a tool you run *from* a target project's directory (or point at one with
-`--project-dir`); it is not released by itself. `cli.py:main()` does two independent things:
+`--project-dir`); it is not released by itself. Apart from the one-shot `--version`,
+`--set-version`, and `--clean` commands, `cli.py:main()` does two things in sequence:
 
-1. **Local wheel lifecycle** (`--mode build|install|dev|reinstall|uninstall`) - builds, installs,
-   or removes the target project's wheel via direct `pip`/`build` calls. This has no rollback: it's
-   a straight sequence of local, cheap-to-repeat operations.
-2. **Release pipeline** (opt-in via `--upload-s3`, `--create-release`, `--publish-pypi`) - a list of
+1. **Wheel build** (always) - removes stale wheels and builds a fresh one with `python -m build`.
+   It is a prerequisite rather than a step: the S3 and GitHub steps need the wheel to exist when
+   they are constructed.
+2. **Release pipeline** (opt-in via `--local-install`/`--local-dev-mode`, `--upload-s3`,
+   `--create-release`, `--publish-pypi`) - a list of
    `ReleaseStep` objects handed to `run_release_pipeline()`, which runs them as a **Saga**: steps
    execute in order, and if one fails or can't run, every step that already completed is undone in
    reverse order.
@@ -133,7 +146,7 @@ Each CLI-driven pipeline run is also recorded under
 more steps complete, rerun from the same target project with:
 
 ```bash
-release-saga --mode clean
+release-saga --clean
 ```
 
 This finds the newest incomplete run for the target project's current version and retries rollback
@@ -149,21 +162,27 @@ merges values in precedence order: built-in default â†’ `[tool.release-saga]` â†
 they're the public functions `build_arg_parser()` and `build_release_steps()`. `release_saga/__init__.py`
 re-exports both, alongside `ReleaseStep`, `ReleaseConfig`, `load_config`, `resolve_project_dir`, and
 `run_release_pipeline`, so `from release_saga import ...` gives a library consumer the whole public
-API without reaching into submodules. `release_saga.steps` likewise re-exports the four concrete
+API without reaching into submodules. `release_saga.steps` likewise re-exports the five concrete
 step classes alongside `ReleaseStep`. This is what lets a custom step reuse the CLI's own flags and
 built-in step wiring instead of reimplementing them - see "Extending with custom steps" below.
 
 ## Release steps
 
-The pipeline ships four built-in steps. `build_release_steps()` - used by `cli.py:main()`, and
+The pipeline ships five built-in steps. `build_release_steps()` - used by `cli.py:main()`, and
 importable directly from `release_saga` - wires them up in this order when their flag is passed:
 
 | Order | Flag               | Step                | `check()` verifies                                                                                                                     | `execute()`                                                                                  | `rollback()`                                                                      |
 |-------|--------------------|---------------------|----------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| 0     | `--local-install`  | `LocalInstallStep`  | a wheel matching the current version exists (nothing in `--local-dev-mode`)                                                            | `pip install --force-reinstall --no-deps` the wheel, then `pip install` it for new dependencies; `pip install -e .` in `--local-dev-mode` | `pip uninstall` the package; **kept** in `--local-dev-mode`                        |
 | 1     | `--upload-s3`      | `UploadS3Step`      | `s3_bucket` configured, `aws` installed and credentials valid, object doesn't already exist at the target key                          | `aws s3 cp` the wheel to `s3://{bucket}/{prefix}{wheel}`                                     | `aws s3 rm` the uploaded object                                                   |
 | 2     | `--create-release` | `GitTagStep`        | `git` installed, `git_remote` configured, tag doesn't already exist locally or on the remote                                           | creates an annotated tag, pushes it to `git_remote`                                          | deletes the remote tag (if pushed), then the local tag (if created)               |
 | 3     | `--create-release` | `GitHubReleaseStep` | `gh` installed and authenticated, release doesn't already exist for the tag, `release_notes_path` has an entry for the current version | builds release notes from `release_notes_path`, runs `gh release create` attaching the wheel | `gh release delete` (only if the release was actually created)                    |
 | 4     | `--publish-pypi`   | `PublishPyPiStep`   | `twine` installed, `~/.pypirc` exists                                                                                                  | `twine check` then `twine upload` on files matched by `publish_glob`                         | **cannot roll back** - logs instructions to yank the release manually on pypi.org |
+
+The local install runs first: it is cheap, fully reversible, and smoke-tests that the wheel
+actually installs before anything is published externally. `--local-dev-mode` implies
+`--local-install`, announces that development is in progress, and installs the project in
+editable mode; that editable install is left in place whatever the release result.
 
 Because a PyPI upload can't be undone, keep `--publish-pypi` as the last step you enable for a
 given release, after steps you're confident will succeed.

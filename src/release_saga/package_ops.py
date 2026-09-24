@@ -110,14 +110,20 @@ def build_wheel(config: ReleaseConfig):
 
 
 def install_wheel(config: ReleaseConfig):
-    """Install the newest built wheel for the target project.
+    """Install or upgrade the target package from its newest built wheel.
+
+    The package itself is force-reinstalled so that a rebuilt wheel replaces an installed one
+    even when the version string is unchanged; a second plain install then pulls in any
+    dependencies that are not yet satisfied, without reinstalling the ones that are.
 
     :param config: Resolved release configuration for the target package.
     :raises FileNotFoundError: If no matching wheel is available to install.
-    :raises CalledProcessError: If the installation command fails.
+    :raises CalledProcessError: If an installation command fails.
     """
     ensure_pip()
-    run([*PIP, "install", str(resolve_wheel_path(config))], check=True)
+    wheel = str(resolve_wheel_path(config))
+    run([*PIP, "install", "--upgrade", "--force-reinstall", "--no-deps", wheel], check=True)
+    run([*PIP, "install", wheel], check=True)
 
 
 def install_wheel_devmode(config: ReleaseConfig):

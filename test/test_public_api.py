@@ -97,5 +97,6 @@ def test_steps_package_reexports_concrete_steps():
     """
     assert release_saga.steps.GitTagStep is release_saga.steps.git_tag.GitTagStep
     assert release_saga.steps.GitHubReleaseStep is release_saga.steps.github_release.GitHubReleaseStep
+    assert release_saga.steps.LocalInstallStep is release_saga.steps.local_install.LocalInstallStep
     assert release_saga.steps.PublishPyPiStep is release_saga.steps.pypi_publish.PublishPyPiStep
     assert release_saga.steps.UploadS3Step is release_saga.steps.s3.UploadS3Step

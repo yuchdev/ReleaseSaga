@@ -1,10 +1,13 @@
 from pathlib import Path
 from typing import Optional
 
+import pytest
+
 from release_saga.cli import build_release_steps
 from release_saga.config import ReleaseConfig
 from release_saga.steps.git_tag import GitTagStep
 from release_saga.steps.github_release import GitHubReleaseStep
+from release_saga.steps.local_install import LocalInstallStep
 from release_saga.steps.pypi_publish import PublishPyPiStep
 from release_saga.steps.s3 import UploadS3Step
 
@@ -169,11 +172,49 @@ def test_build_release_steps_all_flags_full_order(tmp_path: Path):
         upload_s3=True,
         create_release=True,
         publish_pypi=True,
+        local_install=True,
     )
 
     assert [type(step) for step in steps] == [
+        LocalInstallStep,
         UploadS3Step,
         GitTagStep,
         GitHubReleaseStep,
         PublishPyPiStep,
     ]
+
+
+@pytest.mark.parametrize(
+    ("local_install", "local_dev_mode", "expected_dev_mode"),
+    [(True, False, False), (False, True, True), (True, True, True)],
+)
+def test_build_release_steps_local_install_runs_first(
+    tmp_path: Path,
+    local_install: bool,
+    local_dev_mode: bool,
+    expected_dev_mode: bool,
+):
+    """[Unit] build_release_steps: local install runs first.
+
+    Scenario:
+        Focus on the `local install runs first` case for `build_release_steps` and assert the expected outcome.
+
+    Boundaries:
+        Covers one focused branch with pytest fixtures and patched collaborators instead of real external services.
+
+    On failure, first check:
+        The `build_release_steps` branch for this case and the fixtures or monkeypatches that establish it.
+    """
+    write_wheel(tmp_path)
+
+    steps = build_release_steps(
+        make_config(tmp_path),
+        upload_s3=True,
+        create_release=False,
+        publish_pypi=False,
+        local_install=local_install,
+        local_dev_mode=local_dev_mode,
+    )
+
+    assert [type(step) for step in steps] == [LocalInstallStep, UploadS3Step]
+    assert steps[0].dev_mode is expected_dev_mode

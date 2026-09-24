@@ -50,40 +50,44 @@ in precedence order: built-in default → `[tool.release-saga]` table in the tar
 args before merging, so an explicit CLI flag always wins but an *unset* one never masks a value
 from the config table. The result is a frozen `ReleaseConfig` dataclass passed to every step.
 
-**Local package ops vs. release pipeline vs. version setting** (`cli.py`): `main()` does three
-independent things based on `--mode`:
-1. Local wheel lifecycle (`package_ops.py`): `build`/`install`/`dev`/`reinstall`/`uninstall` —
-   direct `pip`/`build` subprocess calls against the target project, no rollback semantics.
-2. The release pipeline (only when `--mode` isn't `uninstall` or `set-version`): an opt-in list of
-   `ReleaseStep`s is assembled from `--upload-s3`, `--create-release` (adds both `GitTagStep` and
-   `GitHubReleaseStep`), and `--publish-pypi` by the public `build_release_steps()` function, then
-   handed to `run_release_pipeline`.
-3. `--mode set-version --new-version X.Y.Z` (`version_ops.py`): sets the version deliberately
-   *outside* the release pipeline/steps machinery — direct, one-shot, no rollback, same tradeoff
-   as `package_ops.py`. It checks `uv` is on `PATH` *before* writing anything (the one check that
-   can be done up front), then writes `pyproject.toml`'s `[project].version` (via a targeted line
-   replace that preserves comments/formatting — it does not round-trip through `tomllib`, which
-   is read-only anyway). It then adds an empty `{"release_notes": []}` entry to
-   `RELEASE_NOTES.json` for the new version — *unless* that version already has an entry there
-   (e.g. hand-written notes from an earlier `set-version` run), in which case `RELEASE_NOTES.json`
-   is left untouched rather than overwritten. Either way it finally runs `uv lock` so `uv.lock`
-   matches. `main()` returns immediately after this — it does not fall through to the wheel
-   lifecycle or the release pipeline. `--version` (no value) is unrelated: a
-   read-only flag that prints the target project's *current* version from its `pyproject.toml` and
-   exits, independent of `--mode`.
+**One-shot commands vs. build + release pipeline** (`cli.py`): there is no `--mode` (removed in
+1.2.0). `main()` first handles three mutually exclusive one-shot flags, each of which exits
+without building:
+1. `--version`: a read-only flag that prints the target project's *current* version from its
+   `pyproject.toml`.
+2. `--set-version VERSION` (`version_ops.py`): sets the version deliberately *outside* the
+   release pipeline/steps machinery - direct, one-shot, no rollback. It checks `uv` is on `PATH`
+   *before* writing anything (the one check that can be done up front), then writes
+   `pyproject.toml`'s `[project].version` (via a targeted line replace that preserves
+   comments/formatting - it does not round-trip through `tomllib`, which is read-only anyway). It
+   then adds an empty `{"release_notes": []}` entry to `RELEASE_NOTES.json` for the new version -
+   *unless* that version already has an entry there (e.g. hand-written notes from an earlier
+   `--set-version` run), in which case `RELEASE_NOTES.json` is left untouched rather than
+   overwritten. Either way it finally runs `uv lock` so `uv.lock` matches.
+3. `--clean`: rebuilds the steps of the newest interrupted run from its recorded history and
+   retries their rollback. Every built-in step class needs a branch in its reconstruction table
+   (and in `built_in_types`), or a recorded run containing it can't be cleaned.
+
+Otherwise `main()` always runs `cleanup_old_wheels` + `build_wheel` (`package_ops.py`; plain
+`release-saga` just builds). That build is a prerequisite, not a step: `UploadS3Step.__init__`
+resolves the wheel path at *construction* time. Then the opt-in list of `ReleaseStep`s is
+assembled from `--local-install`/`--local-dev-mode`, `--upload-s3`, `--create-release` (adds both
+`GitTagStep` and `GitHubReleaseStep`), and `--publish-pypi` by the public `build_release_steps()`
+function, and handed to `run_release_pipeline`.
 
 **Public library facade** (`release_saga/__init__.py`): re-exports `ReleaseStep`, `ReleaseConfig`,
 `load_config`, `resolve_project_dir`, `run_release_pipeline`, `build_arg_parser`, and
 `build_release_steps` — the CLI's own argument parser and built-in step assembly are public,
-reusable functions, not private to `cli.py`. `steps/__init__.py` similarly re-exports the four
-concrete step classes (`GitTagStep`, `GitHubReleaseStep`, `PublishPyPiStep`, `UploadS3Step`)
+reusable functions, not private to `cli.py`. `steps/__init__.py` similarly re-exports the five
+concrete step classes (`GitTagStep`, `GitHubReleaseStep`, `LocalInstallStep`, `PublishPyPiStep`,
+`UploadS3Step`)
 alongside `ReleaseStep`. Together these let a library consumer add one custom `ReleaseStep`
 subclass and still reuse the CLI's own flags and built-in step wiring rather than reimplementing
 them — the worked pattern is in `docs/tutorials/custom-release-step.md`. There is deliberately no
 `run(extra_steps=...)`-style wrapper; that was considered and rejected as unneeded abstraction over
 ~15 lines of glue.
 
-Gotcha: `steps/__init__.py` eagerly importing all four step modules creates a real cycle risk.
+Gotcha: `steps/__init__.py` eagerly importing all five step modules creates a real cycle risk.
 `pipeline.py` imports `steps.base`, which runs `steps/__init__.py` in full, which imports
 `pypi_publish.py` — so a *module-level* `from ..pipeline import _log` there would execute while
 `pipeline` is still mid-import (it hasn't reached the `_log` definition yet) and raise an
@@ -105,7 +109,10 @@ Gotcha: `steps/__init__.py` eagerly importing all four step modules creates a re
 available), and abstract `execute()`/`rollback()`. Steps that can only partially succeed track
 their own progress in instance state so `rollback()` only undoes what actually happened — see
 `GitTagStep` (`_created_local_tag`, `_pushed_remote_tag`) and `GitHubReleaseStep`
-(`_created_release`). `UploadS3Step` and `PublishPyPiStep` are single-action steps with no such
+(`_created_release`), and `LocalInstallStep` (`_installed`; it always runs first, and in
+`dev_mode` its `rollback()` is a deliberate no-op that keeps the editable install, and its
+`execute()` logs a "development in progress" message). `UploadS3Step` and `PublishPyPiStep` are
+single-action steps with no such
 state; notably `PublishPyPiStep.rollback()` cannot undo a PyPI upload and only prints a manual-yank
 warning — PyPI publish should generally be the last step in a pipeline for this reason.
 
